@@ -45,7 +45,6 @@
 html {
     font-size: 16px;
     background-color: var(--void-black);
-    /* Hide native scrollbar for cinematic feel */
     scrollbar-width: none; 
     -ms-overflow-style: none;
 }
@@ -62,24 +61,21 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overscroll-behavior: none;
-    /* Film grain overlay */
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
 }
 
-/* Lock scroll during preloader/intro */
 .lock-scroll {
     overflow: hidden !important;
     height: 100vh;
     height: 100svh;
 }
 
-/* Utilities */
 .hidden { display: none !important; }
 .vh-100 { height: 100vh; height: 100svh; }
-.vh-150 { height: 150vh; } /* For parallax scrolling sections */
+.vh-150 { height: 150vh; }
 
 /* ==========================================================================
-   GLOBAL UI & CURSOR (AWWWARDS STYLE)
+   GLOBAL UI & CURSOR
    ========================================================================== */
 #custom-cursor {
     position: fixed;
@@ -104,6 +100,7 @@ body {
     border-radius: 50%;
     position: absolute;
     transform: translate(-50%, -50%);
+    will-change: transform;
 }
 
 .cursor-ring {
@@ -114,6 +111,7 @@ body {
     position: absolute;
     transform: translate(-50%, -50%);
     transition: width 0.3s var(--ease-apple), height 0.3s var(--ease-apple), background 0.3s;
+    will-change: transform;
 }
 
 .cursor-text {
@@ -127,7 +125,6 @@ body {
     transition: opacity 0.3s;
 }
 
-/* Cursor states managed by JS */
 #custom-cursor.hovering .cursor-ring {
     width: 80px;
     height: 80px;
@@ -206,11 +203,6 @@ body {
 .sound-toggle.playing .w1 { animation: wave 1.2s infinite ease-in-out; }
 .sound-toggle.playing .w2 { animation: wave 1.2s infinite ease-in-out 0.2s; }
 .sound-toggle.playing .w3 { animation: wave 1.2s infinite ease-in-out 0.4s; }
-
-@keyframes wave {
-    0%, 100% { height: 6px; }
-    50% { height: 16px; background: var(--gold-primary); }
-}
 
 /* ==========================================================================
    WEBGL CANVAS (Background Physics)
@@ -332,7 +324,6 @@ body {
     overflow: hidden;
 }
 
-/* Glow sweep effect on glass */
 .glass-panel::after {
     content: '';
     position: absolute;
@@ -360,7 +351,7 @@ body {
     backdrop-filter: blur(30px);
     text-align: center;
     max-width: 600px;
-    transform: translateZ(0); /* GPU Force */
+    transform: translateZ(0); 
     animation: float 6s ease-in-out infinite;
 }
 
@@ -431,14 +422,19 @@ body {
     color: var(--text-secondary);
     opacity: 0;
     transform: translateY(30px);
-    /* JS will animate this in */
+}
+
+.scene-active .reveal-text.line-1 {
+    opacity: 1;
+    transform: translateY(0);
+    transition: var(--transition-slow);
 }
 
 .windsong-text {
     font-family: var(--font-script);
     font-size: 9vw;
     line-height: 1.2;
-    padding-right: 20px; /* Prevent script clipping */
+    padding-right: 20px;
 }
 
 .gradient-gold {
@@ -486,9 +482,9 @@ body {
 }
 
 /* ==========================================================================
-   SCENE 2: THE LETTER (3D Depth)
+   SCENE 2: THE LETTER (Fixed valid CSS Class name)
    ========================================================================== */
-.3d-perspective-container {
+.perspective-container-3d {
     perspective: 1200px;
     width: 100%;
     max-width: 900px;
@@ -507,7 +503,6 @@ body {
     transition: transform 1s var(--ease-out-expo);
 }
 
-/* JS will remove this class on intersection */
 .glass-letter.in-view {
     transform: rotateX(0deg) translateY(0px);
 }
@@ -553,14 +548,14 @@ body {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transform: scale(1.1); /* Buffer for parallax/zoom */
+    transform: scale(1.1);
     will-change: transform;
 }
 
-/* Base reveal logic */
 .scene-active .image-reveal-mask {
     clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
 }
+
 .image-reveal-mask {
     clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%);
     transition: clip-path 1.5s var(--ease-apple);
@@ -589,7 +584,7 @@ body {
 
 .layout-asymmetric .text-wrapper {
     padding: 4rem;
-    margin-left: -10vw; /* Overlap effect */
+    margin-left: -10vw; 
     z-index: 2;
 }
 
@@ -645,10 +640,16 @@ body {
 .bubble-mask {
     width: 100%;
     aspect-ratio: 1;
-    border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; /* Organic shape */
+    border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
     overflow: hidden;
     animation: morphShape 15s ease-in-out infinite alternate;
     box-shadow: 0 0 60px rgba(212, 175, 55, 0.15);
+}
+
+.bubble-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 /* ==========================================================================
@@ -667,7 +668,7 @@ body {
     top: 10%;
     width: 45%;
     background: #fff;
-    padding: 20px 20px 80px 20px; /* Polaroid bottom heavy */
+    padding: 20px 20px 80px 20px;
     box-shadow: 20px 30px 60px rgba(0,0,0,0.5);
     transform: rotate(var(--rotate)) scale(0.9);
     transition: transform 0.5s var(--ease-out-expo);
@@ -683,7 +684,7 @@ body {
     width: 100%;
     aspect-ratio: 1;
     object-fit: cover;
-    filter: contrast(1.1) saturate(0.9); /* Vintage feel */
+    filter: contrast(1.1) saturate(0.9);
 }
 
 .polaroid-glare {
@@ -730,7 +731,7 @@ body {
     aspect-ratio: 4/5;
     padding: 10px;
     border: 1px solid rgba(212, 175, 55, 0.3);
-    border-radius: 100px 100px 0 0; /* Arch shape */
+    border-radius: 100px 100px 0 0;
     overflow: hidden;
     margin-bottom: 4rem;
 }
@@ -805,4 +806,157 @@ body {
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: trans
+    transform: translate(-50%, -50%);
+    width: 60vmin;
+    height: 60vmin;
+    z-index: 0;
+}
+
+.moon-texture {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #fdf5c9, #d4af37, #4a3411);
+    box-shadow: inset -20px -20px 40px rgba(0,0,0,0.8);
+    animation: rotateMoon 60s linear infinite;
+}
+
+.moon-halo {
+    position: absolute;
+    inset: -50%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(212,175,55,0.15) 0%, transparent 60%);
+    animation: pulseHalo 4s infinite alternate var(--ease-apple);
+}
+
+.finale-typography {
+    z-index: 1;
+    text-align: center;
+}
+
+.finale-title {
+    font-size: 8vw;
+    color: var(--gold-light);
+    text-shadow: 0 0 50px rgba(212,175,55,0.6);
+    margin-bottom: 1rem;
+}
+
+.finale-subtitle {
+    font-family: var(--font-body);
+    text-transform: uppercase;
+    letter-spacing: 6px;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+/* ==========================================================================
+   ANIMATIONS & KEYFRAMES
+   ========================================================================== */
+@keyframes wave {
+    0%, 100% { height: 6px; }
+    50% { height: 16px; background: var(--gold-primary); }
+}
+
+@keyframes rotateFlare {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pulseDots {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 1; }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+@keyframes shimmerGold {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+
+@keyframes scrollWheel {
+    0% { transform: translateY(0); opacity: 1; }
+    100% { transform: translateY(15px); opacity: 0; }
+}
+
+@keyframes blink {
+    50% { opacity: 0; }
+}
+
+@keyframes glassSweep {
+    0% { left: -100%; }
+    20% { left: 200%; }
+    100% { left: 200%; }
+}
+
+@keyframes morphShape {
+    0% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+    34% { border-radius: 70% 30% 50% 50% / 30% 30% 70% 70%; }
+    67% { border-radius: 100% 60% 60% 100% / 100% 100% 60% 60%; }
+    100% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+}
+
+@keyframes rotateMoon {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pulseHalo {
+    0% { transform: scale(0.95); opacity: 0.7; }
+    100% { transform: scale(1.05); opacity: 1; }
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN (Tablets & Mobile)
+   ========================================================================== */
+@media (max-width: 1024px) {
+    .reveal-text.line-1 { font-size: 4vw; letter-spacing: 1vw; }
+    .windsong-text { font-size: 12vw; }
+    
+    .layout-asymmetric .chapter-content { grid-template-columns: 1fr; }
+    .layout-asymmetric .text-wrapper { margin-left: 0; margin-top: -10vh; padding: 3rem; }
+    .layout-asymmetric .media-wrapper { height: 60vh; }
+    
+    .layout-split { flex-direction: column; }
+    .split-left, .split-right { width: 100%; padding: 2rem; }
+    .split-left { order: 2; }
+    
+    .layout-scatter .scatter-container { height: auto; display: flex; flex-direction: column; align-items: center; gap: 3rem; }
+    .polaroid-frame { position: relative; left: 0; top: 0; width: 70%; transform: rotate(-3deg); }
+    .scatter-text { position: relative; width: 90%; right: 0; bottom: 0; padding: 3rem; }
+}
+
+@media (max-width: 768px) {
+    #custom-cursor { display: none !important; }
+    .global-ui { padding: 1.5rem; }
+    .progress-container { display: none; }
+    
+    .glass-portal { padding: 3rem 2rem; border-radius: 20px; margin: 0 1rem; }
+    .portal-title { font-size: 2rem; }
+    
+    .windsong-text { font-size: 16vw; }
+    
+    .glass-letter { padding: 2.5rem; border-radius: 20px; }
+    .typewriter-canvas { font-size: 1.2rem; }
+    
+    .story-title { font-size: 1.8rem; }
+    .story-body { font-size: 1rem; }
+    
+    .floating-text-center { bottom: 10%; width: 90%; }
+    
+    .elegant-frame { width: 90%; }
+    
+    .centered-glass-content { padding: 2.5rem 1.5rem; width: 90%; }
+    
+    .finale-title { font-size: 14vw; }
+    .finale-subtitle { font-size: 0.8rem; letter-spacing: 3px; }
+}
+
+@media (max-width: 480px) {
+    .portal-title { font-size: 1.6rem; }
+    .story-title { font-size: 1.5rem; }
+    .typewriter-canvas { font-size: 1rem; }
+    .glass-panel { padding: 2rem 1.5rem; }
+    .polaroid-frame { width: 90%; }
+}
