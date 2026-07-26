@@ -1,476 +1,501 @@
-/**
- * Cinematic Birthday Experience Script (Awwwards Edition)
- * Enhancements: Web Audio API (Sound Reactive), Advanced Physics (Friction, Gravity, 3D Petals), Shooting Stars.
- */
+document.addEventListener('DOMContentLoaded', () => {
+    'use strict';
 
-document.addEventListener("DOMContentLoaded", () => {
-    
-    /* =========================================================================
-       1. Globals & Setup
-       ========================================================================= */
-    const UI = {
+    // ==========================================================================
+    // 1. DOM ELEMENTS & STATE MANAGEMENT
+    // ==========================================================================
+    const DOM = {
         preloader: document.getElementById('preloader'),
-        openBtn: document.getElementById('open-btn'),
+        appContainer: document.getElementById('app-container'),
         openingScreen: document.getElementById('opening-screen'),
-        mainContent: document.getElementById('main-content'),
-        musicToggle: document.getElementById('music-toggle'),
-        musicControls: document.getElementById('music-controls'),
+        heroScreen: document.getElementById('hero-screen'),
+        openBtn: document.getElementById('open-surprise-btn'),
         bgMusic: document.getElementById('bg-music'),
-        scrollBtn: document.getElementById('scroll-to-letter'),
-        heroSection: document.getElementById('hero'),
-        cursorGlow: document.getElementById('cursor-glow'),
-        typewriterContainer: document.getElementById('typewriter-container'),
-        lightbox: document.getElementById('lightbox'),
-        lightboxImg: document.getElementById('lightbox-img'),
-        lightboxCaption: document.getElementById('lightbox-caption'),
-        galleryItems: document.querySelectorAll('.gallery-item'),
-        lbClose: document.querySelector('.lightbox-close'),
-        lbPrev: document.querySelector('.lightbox-prev'),
-        lbNext: document.querySelector('.lightbox-next'),
-        heartBtn: document.getElementById('glowing-heart-btn'),
-        surpriseScreen: document.getElementById('surprise-screen'),
-        bgCanvas: document.getElementById('bg-canvas'),
-        fxCanvas: document.getElementById('fx-canvas'),
-        moon: document.getElementById('interactive-moon')
+        mouseGlow: document.getElementById('mouse-glow'),
+        typewriterText: document.getElementById('typewriter-text'),
+        galleryItems: document.querySelectorAll('.gallery-item img'),
+        modal: document.getElementById('image-modal'),
+        modalImage: document.getElementById('modal-image'),
+        closeModal: document.querySelector('.close-modal'),
+        modalLoader: document.querySelector('.modal-loader'),
+        canvas: document.getElementById('effects-canvas'),
+        cssParticles: document.getElementById('css-particles'),
+        screens: document.querySelectorAll('.screen')
     };
 
-    let isOpened = false;
-    let isFinale = false;
-    let currentPhotoIndex = 0;
-    const totalPhotos = UI.galleryItems.length;
+    const STATE = {
+        isMobile: window.innerWidth <= 768,
+        typewriterStarted: false,
+        fireworksActive: false,
+        audioInitialized: false,
+        sourceConnected: false,
+        isTouchDevice: false,
+        isTabActive: true,
+        musicData: 0,
+        particleInterval: null,
+        animFrameId: null
+    };
 
-    // Preloader Sequence
+    // ==========================================================================
+    // 2. IMAGE PRELOADING & ERROR HANDLING
+    // ==========================================================================
+    if (DOM.galleryItems.length > 0) {
+        DOM.galleryItems.forEach(img => {
+            if (img.complete && img.naturalWidth !== 0) {
+                img.classList.add('loaded');
+            } else {
+                img.addEventListener('load', () => img.classList.add('loaded'), { once: true });
+                img.addEventListener('error', () => {
+                    img.style.display = 'none'; 
+                    if (img.parentElement) {
+                        img.parentElement.style.background = 'linear-gradient(45deg, #140826, #220e42)';
+                        img.parentElement.insertAdjacentHTML('beforeend', 
+                            '<span style="color:var(--gold); position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; font-size:0.85rem; padding:10px;">Memory ❤️</span>'
+                        );
+                    }
+                }, { once: true });
+            }
+        });
+    }
+
+    // ==========================================================================
+    // 3. PRELOADER LOGIC (Strictly 3 Seconds)
+    // ==========================================================================
     setTimeout(() => {
-        UI.preloader.style.opacity = '0';
-        setTimeout(() => {
-            UI.preloader.classList.add('hidden');
-            UI.openingScreen.classList.remove('hidden');
-        }, 2000);
-    }, 4500);
-
-    // Custom Cursor Smoothing
-    let mouseX = window.innerWidth / 2;
-    let mouseY = window.innerHeight / 2;
-    let cursorX = mouseX;
-    let cursorY = mouseY;
-    
-    if (window.matchMedia("(hover: hover)").matches) {
-        document.addEventListener('mousemove', (e) => {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-        });
-
-        // Smooth follow
-        function renderCursor() {
-            cursorX += (mouseX - cursorX) * 0.15;
-            cursorY += (mouseY - cursorY) * 0.15;
-            UI.cursorGlow.style.transform = `translate(calc(-50% + ${cursorX}px), calc(-50% + ${cursorY}px))`;
-            requestAnimationFrame(renderCursor);
+        if (DOM.preloader) {
+            DOM.preloader.classList.remove('active');
+            setTimeout(() => {
+                DOM.preloader.classList.add('hidden');
+                if (DOM.appContainer) {
+                    DOM.appContainer.classList.remove('hidden');
+                }
+            }, 1500);
         }
-        renderCursor();
+    }, 3000);
+
+    // ==========================================================================
+    // 4. AUDIO & INTERACTION LOGIC (iOS Safari Compatible)
+    // ==========================================================================
+    let audioCtx, analyser, dataArray;
+
+    function initWebAudioAPI() {
+        if (STATE.sourceConnected || !DOM.bgMusic) return;
         
-        const clickables = document.querySelectorAll('button, .gallery-item, .pulse-heart, .lightbox-close, .lightbox-prev, .lightbox-next');
-        clickables.forEach(el => {
-            el.addEventListener('mouseenter', () => {
-                UI.cursorGlow.style.width = '80px';
-                UI.cursorGlow.style.height = '80px';
-                UI.cursorGlow.style.background = 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 70%)';
-            });
-            el.addEventListener('mouseleave', () => {
-                UI.cursorGlow.style.width = '300px';
-                UI.cursorGlow.style.height = '300px';
-                UI.cursorGlow.style.background = 'radial-gradient(circle, rgba(255,215,0,0.08) 0%, rgba(255,255,255,0) 60%)';
-            });
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+            
+            // Critical for Mobile Safari
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            analyser = audioCtx.createAnalyser();
+            const source = audioCtx.createMediaElementSource(DOM.bgMusic);
+            
+            source.connect(analyser);
+            analyser.connect(audioCtx.destination);
+            
+            analyser.fftSize = 128;
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+            
+            STATE.audioInitialized = true;
+            STATE.sourceConnected = true;
+            
+            analyzeAudio();
+        } catch (e) {
+            // Graceful fallback if Web Audio API is restricted
+            STATE.audioInitialized = false;
+        }
+    }
+
+    function analyzeAudio() {
+        if (!STATE.audioInitialized || !STATE.isTabActive) return;
+        
+        analyser.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+        STATE.musicData = sum / dataArray.length;
+        
+        requestAnimationFrame(analyzeAudio);
+    }
+
+    if (DOM.openBtn) {
+        DOM.openBtn.addEventListener('click', () => {
+            // Prevent double taps
+            DOM.openBtn.disabled = true;
+            DOM.openBtn.style.pointerEvents = 'none';
+
+            if (DOM.bgMusic) {
+                DOM.bgMusic.volume = 0.6;
+                const playPromise = DOM.bgMusic.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        initWebAudioAPI();
+                    }).catch(() => {
+                        // Audio blocked fallback
+                    });
+                }
+            }
+
+            // Smooth transition
+            DOM.openingScreen.style.opacity = '0';
+            setTimeout(() => {
+                DOM.openingScreen.classList.add('hidden');
+                DOM.openingScreen.classList.remove('active');
+                if (DOM.heroScreen) {
+                    DOM.heroScreen.classList.add('active');
+                    DOM.heroScreen.scrollIntoView({ behavior: 'smooth' });
+                }
+                
+                initCanvasEffects();
+                startCSSParticles();
+            }, 1000);
         });
     }
 
-    /* =========================================================================
-       2. Web Audio API (Sound Reactive Visuals)
-       ========================================================================= */
-    let audioCtx, analyser, dataArray, audioDataAvg = 0;
+    // ==========================================================================
+    // 5. TOUCH & MOUSE GLOW LOGIC
+    // ==========================================================================
+    window.addEventListener('touchstart', () => {
+        STATE.isTouchDevice = true;
+        if (DOM.mouseGlow) DOM.mouseGlow.style.display = 'none';
+    }, { once: true, passive: true });
 
-    function initAudio() {
-        if (!audioCtx) {
-            try {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                analyser = audioCtx.createAnalyser();
-                const source = audioCtx.createMediaElementSource(UI.bgMusic);
-                source.connect(analyser);
-                analyser.connect(audioCtx.destination);
-                analyser.fftSize = 128;
-                dataArray = new Uint8Array(analyser.frequencyBinCount);
-            } catch(e) {
-                console.log("Audio API not supported or blocked by CORS", e);
+    if (DOM.mouseGlow) {
+        document.addEventListener('mousemove', (e) => {
+            if (STATE.isTouchDevice || !STATE.isTabActive) return;
+            DOM.mouseGlow.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0) translate(-50%, -50%)`;
+        }, { passive: true });
+    }
+
+    // ==========================================================================
+    // 6. SCROLL OBSERVATION & ANIMATIONS
+    // ==========================================================================
+    const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.2
+    };
+
+    const screenObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('active');
+                
+                if (entry.target.id === 'letter-screen' && !STATE.typewriterStarted) {
+                    STATE.typewriterStarted = true;
+                    typeLetter();
+                }
             }
-        }
-        if (audioCtx && audioCtx.state === 'suspended') {
-            audioCtx.resume();
+
+            // Toggle fireworks strictly when final scene is in view to save resources
+            if (entry.target.id === 'final-screen') {
+                STATE.fireworksActive = entry.isIntersecting;
+            }
+        });
+    }, observerOptions);
+
+    if (DOM.screens) {
+        DOM.screens.forEach(screen => {
+            if (screen.id !== 'opening-screen') screenObserver.observe(screen);
+        });
+    }
+
+    // ==========================================================================
+    // 7. TYPEWRITER EFFECT
+    // ==========================================================================
+    const letterContent = "My Dearest Pyari Bauni,\n\nOn this magical night, under the gentle glow of the moon, I want to take a moment to celebrate you. You bring so much light, warmth, and beauty into my world. Every memory we share is a treasure, and your smile is my favorite sight.\n\nMay this year bring you all the love and happiness you deserve.\n\nHappy Birthday, my love! ❤️";
+    let charIndex = 0;
+
+    function typeLetter() {
+        if (!DOM.typewriterText) return;
+        if (charIndex < letterContent.length) {
+            DOM.typewriterText.innerHTML += letterContent.charAt(charIndex) === '\n' ? '<br>' : letterContent.charAt(charIndex);
+            charIndex++;
+            setTimeout(typeLetter, 40);
+        } else {
+            const cursor = document.getElementById('typewriter-cursor');
+            if (cursor) cursor.style.display = 'none';
         }
     }
 
-    function updateAudioData() {
-        if (analyser && dataArray) {
-            analyser.getByteFrequencyData(dataArray);
-            let sum = 0;
-            // Focus on bass frequencies (lower indices)
-            for (let i = 0; i < 15; i++) { sum += dataArray[i]; }
-            audioDataAvg = sum / 15;
+    // ==========================================================================
+    // 8. GALLERY MODAL
+    // ==========================================================================
+    if (DOM.modal && DOM.galleryItems.length > 0) {
+        const hideModal = () => {
+            DOM.modal.classList.add('hidden');
+            document.body.style.overflow = '';
             
-            // Reactivity: scale moon glow slightly with bass
-            if(!isOpened && audioDataAvg > 0) {
-                const extraGlow = (audioDataAvg / 255) * 60;
-                UI.moon.style.boxShadow = `inset -10px -10px 20px rgba(0,0,0,0.5), 0 0 ${40 + extraGlow}px rgba(244, 208, 63, 0.6), 0 0 ${100 + extraGlow*2}px rgba(255, 255, 255, 0.4)`;
+            setTimeout(() => { 
+                if (DOM.modalImage) {
+                    DOM.modalImage.src = ''; 
+                    DOM.modalImage.classList.remove('loaded');
+                }
+            }, 500);
+        };
+
+        DOM.galleryItems.forEach(item => {
+            item.addEventListener('click', () => {
+                if (!item.classList.contains('loaded')) return;
+                
+                document.body.style.overflow = 'hidden';
+                DOM.modal.classList.remove('hidden');
+                if (DOM.modalLoader) DOM.modalLoader.classList.remove('hidden');
+                
+                DOM.modalImage.src = item.src;
+                
+                DOM.modalImage.onload = () => {
+                    if (DOM.modalLoader) DOM.modalLoader.classList.add('hidden');
+                    DOM.modalImage.classList.add('loaded');
+                };
+
+                DOM.modalImage.onerror = () => {
+                    if (DOM.modalLoader) DOM.modalLoader.classList.add('hidden');
+                    hideModal();
+                };
+            });
+        });
+
+        if (DOM.closeModal) DOM.closeModal.addEventListener('click', hideModal);
+        
+        DOM.modal.addEventListener('click', (e) => {
+            if (e.target === DOM.modal || e.target.classList.contains('modal-content-wrapper')) {
+                hideModal();
             }
-            
-            // Reactivity: pulse heart at the end
-            if(isOpened && !isFinale) {
-                const scale = 1 + (audioDataAvg / 255) * 0.3;
-                UI.heartBtn.style.transform = `scale(${scale})`;
-            }
-        }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !DOM.modal.classList.contains('hidden')) hideModal();
+        });
     }
 
-    /* =========================================================================
-       3. Canvas Engine (Advanced Background & Physics)
-       ========================================================================= */
-    const bgCtx = UI.bgCanvas.getContext('2d');
-    const fxCtx = UI.fxCanvas.getContext('2d');
-    let width, height;
+    // ==========================================================================
+    // 9. HARDWARE-ACCELERATED CSS PARTICLES
+    // ==========================================================================
+    function startCSSParticles() {
+        if (!DOM.cssParticles || STATE.particleInterval) return;
+        
+        const spawnRate = STATE.isMobile ? 1200 : 600; 
+        
+        STATE.particleInterval = setInterval(() => {
+            if (!STATE.isTabActive) return;
+
+            const particle = document.createElement('div');
+            particle.className = 'css-particle';
+            particle.innerHTML = Math.random() > 0.5 ? '❤️' : '✨';
+            
+            const size = Math.random() * 15 + 10;
+            const startPosX = Math.random() * window.innerWidth;
+            const duration = Math.random() * 5000 + 5000;
+            
+            particle.style.cssText = `
+                left: ${startPosX}px;
+                top: -30px;
+                font-size: ${size}px;
+                transition: transform ${duration}ms linear, opacity ${duration}ms ease-in-out;
+                filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.5));
+            `;
+            
+            DOM.cssParticles.appendChild(particle);
+            
+            requestAnimationFrame(() => {
+                particle.style.opacity = '0.6';
+                particle.style.transform = `translate3d(${(Math.random() - 0.5) * 150}px, ${window.innerHeight + 50}px, 0) rotate(${Math.random() * 360}deg)`;
+            });
+
+            setTimeout(() => {
+                if (particle.parentNode) particle.parentNode.removeChild(particle);
+            }, duration);
+
+        }, spawnRate);
+    }
+
+    // ==========================================================================
+    // 10. CANVAS HIGH-PERFORMANCE PHYSICS & VISIBILITY HANDLING
+    // ==========================================================================
+    let ctx, w, h;
+    let stars = [], fireflies = [], fireworks = [];
+
+    function initCanvasEffects() {
+        if (!DOM.canvas) return;
+        ctx = DOM.canvas.getContext('2d', { alpha: false });
+        
+        resizeCanvas();
+        
+        window.addEventListener('resize', handleResize, { passive: true });
+        window.addEventListener('orientationchange', () => {
+            setTimeout(handleResize, 200);
+        }, { passive: true });
+
+        const numStars = STATE.isMobile ? 70 : 180;
+        const numFireflies = STATE.isMobile ? 12 : 35;
+
+        for (let i = 0; i < numStars; i++) stars.push(new Star());
+        for (let i = 0; i < numFireflies; i++) fireflies.push(new Firefly());
+
+        animateCanvas();
+    }
+
+    function handleResize() {
+        resizeCanvas();
+        STATE.isMobile = window.innerWidth <= 768;
+    }
 
     function resizeCanvas() {
-        width = window.innerWidth;
-        height = window.innerHeight;
-        UI.bgCanvas.width = width;
-        UI.bgCanvas.height = height;
-        UI.fxCanvas.width = width;
-        UI.fxCanvas.height = height;
+        w = DOM.canvas.width = window.innerWidth;
+        h = DOM.canvas.height = window.innerHeight;
     }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
 
-    // Entities Arrays
-    const stars = [];
-    const shootingStars = [];
-    const fireworks = [];
-    const particles = [];
-    const petals = [];
-
-    // Background Stars
     class Star {
         constructor() {
-            this.x = Math.random() * width; this.y = Math.random() * height;
-            this.size = Math.random() * 1.5; this.alpha = Math.random();
-            this.speed = Math.random() * 0.02 + 0.005; this.dir = Math.random() > 0.5 ? 1 : -1;
+            this.x = Math.random() * (w || window.innerWidth);
+            this.y = Math.random() * (h || window.innerHeight);
+            this.r = Math.random() * 1.5;
+            this.alpha = Math.random();
+            this.speed = (Math.random() * 0.015) + 0.005;
         }
         update() {
-            this.alpha += this.speed * this.dir;
-            if (this.alpha >= 1 || this.alpha <= 0.1) this.dir *= -1;
+            this.alpha += this.speed;
+            if (this.alpha >= 1 || this.alpha <= 0) this.speed *= -1;
         }
-        draw(ctx) {
-            ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`; ctx.fill();
-        }
-    }
-
-    // Shooting Stars
-    class ShootingStar {
-        constructor() {
-            this.reset();
-        }
-        reset() {
-            this.x = Math.random() * width * 1.5;
-            this.y = -20;
-            this.len = Math.random() * 80 + 20;
-            this.speedX = -(Math.random() * 10 + 5);
-            this.speedY = Math.random() * 10 + 5;
-            this.active = false;
-        }
-        spawn() { this.active = true; }
-        update() {
-            if (!this.active) return;
-            this.x += this.speedX; this.y += this.speedY;
-            if (this.x < -100 || this.y > height + 100) this.reset();
-        }
-        draw(ctx) {
-            if (!this.active) return;
+        draw() {
             ctx.beginPath();
-            ctx.moveTo(this.x, this.y);
-            ctx.lineTo(this.x - this.speedX * 2, this.y - this.speedY * 2);
-            ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            // Glow head
-            ctx.beginPath(); ctx.arc(this.x, this.y, 2, 0, Math.PI*2);
-            ctx.fillStyle = '#fff'; ctx.shadowBlur = 15; ctx.shadowColor = '#fff'; ctx.fill(); ctx.shadowBlur = 0;
+            ctx.arc(this.x % w, this.y % h, this.r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 255, 255, ${Math.abs(this.alpha)})`;
+            ctx.fill();
         }
     }
 
-    // Cinematic Fireworks with Trails & Friction
-    class Particle {
-        constructor(x, y, color) {
-            this.x = x; this.y = y; this.color = color;
-            const angle = Math.random() * Math.PI * 2;
-            const speed = Math.random() * 8 + 2;
-            this.vx = Math.cos(angle) * speed;
-            this.vy = Math.sin(angle) * speed;
-            this.alpha = 1;
-            this.friction = 0.95; // realistic slowdown
-            this.gravity = 0.05;
-            this.decay = Math.random() * 0.015 + 0.01;
-            this.history = []; // trails
+    class Firefly {
+        constructor() {
+            this.x = Math.random() * (w || window.innerWidth);
+            this.y = Math.random() * (h || window.innerHeight);
+            this.r = Math.random() * 2 + 1;
+            this.vx = (Math.random() - 0.5) * 0.5;
+            this.vy = (Math.random() - 0.5) * 0.5;
+            this.alpha = Math.random();
         }
         update() {
-            this.history.push({x: this.x, y: this.y});
-            if(this.history.length > 5) this.history.shift();
+            const boost = (STATE.musicData > 100) ? 1.4 : 1;
             
-            this.vx *= this.friction;
-            this.vy *= this.friction;
+            this.x += this.vx * boost;
+            this.y += this.vy * boost;
+            
+            if (this.x < 0) this.x = w;
+            if (this.x > w) this.x = 0;
+            if (this.y < 0) this.y = h;
+            if (this.y > h) this.y = 0;
+            
+            this.vx += (Math.random() - 0.5) * 0.05;
+            this.vy += (Math.random() - 0.5) * 0.05;
+            
+            if (this.vx > 0.8) this.vx = 0.8;
+            if (this.vx < -0.8) this.vx = -0.8;
+            if (this.vy > 0.8) this.vy = 0.8;
+            if (this.vy < -0.8) this.vy = -0.8;
+        }
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+            const glow = (STATE.musicData > 120) ? 12 : 6;
+            ctx.fillStyle = `rgba(212, 175, 55, ${this.alpha})`;
+            ctx.shadowBlur = glow;
+            ctx.shadowColor = '#d4af37';
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+    }
+
+    class FireworkParticle {
+        constructor(x, y, color) {
+            this.x = x;
+            this.y = y;
+            this.color = color;
+            this.r = Math.random() * 2 + 1;
+            const angle = Math.random() * Math.PI * 2;
+            const velocity = Math.random() * 5 + 2;
+            this.vx = Math.cos(angle) * velocity;
+            this.vy = Math.sin(angle) * velocity;
+            this.alpha = 1;
+            this.decay = Math.random() * 0.02 + 0.015;
+            this.gravity = 0.05;
+        }
+        update() {
             this.vy += this.gravity;
             this.x += this.vx;
             this.y += this.vy;
             this.alpha -= this.decay;
         }
-        draw(ctx) {
-            if(this.history.length > 1) {
-                ctx.beginPath();
-                ctx.moveTo(this.history[0].x, this.history[0].y);
-                for(let i=1; i<this.history.length; i++) ctx.lineTo(this.history[i].x, this.history[i].y);
-                ctx.strokeStyle = `rgba(${this.color}, ${this.alpha})`;
-                ctx.lineWidth = 2; ctx.stroke();
-            }
-            ctx.beginPath(); ctx.arc(this.x, this.y, 1.5, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255,255,255,${this.alpha})`; ctx.shadowBlur=10; ctx.shadowColor=`rgb(${this.color})`; ctx.fill(); ctx.shadowBlur=0;
-        }
-    }
-
-    class Firework {
-        constructor() {
-            this.x = Math.random() * width; this.y = height + 10;
-            this.targetY = Math.random() * (height*0.4) + height*0.1;
-            this.vy = -(Math.random() * 4 + 7);
-            this.color = `${Math.floor(Math.random()*100+155)}, ${Math.floor(Math.random()*50+50)}, ${Math.floor(Math.random()*150+105)}`; // Warm Pinks/Golds/Purples
-            this.exploded = false;
-            this.history = [];
-        }
-        update() {
-            if (!this.exploded) {
-                this.history.push({x: this.x, y: this.y});
-                if(this.history.length > 8) this.history.shift();
-                
-                this.vy += 0.08; // gravity on shell
-                this.y += this.vy;
-                if (this.vy >= 0 || this.y <= this.targetY) {
-                    this.exploded = true;
-                    this.explode();
-                }
-            }
-        }
-        draw(ctx) {
-            if (!this.exploded && this.history.length > 1) {
-                ctx.beginPath(); ctx.moveTo(this.history[0].x, this.history[0].y);
-                for(let i=1; i<this.history.length; i++) ctx.lineTo(this.history[i].x, this.history[i].y);
-                ctx.strokeStyle = `rgba(255,200,200,0.6)`; ctx.lineWidth = 2; ctx.stroke();
-            }
-        }
-        explode() {
-            // Flash effect
-            fxCtx.fillStyle = 'rgba(255,255,255,0.2)';
-            fxCtx.fillRect(0,0,width,height);
-            for(let i=0; i<80; i++) particles.push(new Particle(this.x, this.y, this.color));
-        }
-    }
-
-    // 3D Floating Petals
-    class Petal {
-        constructor() {
-            this.x = Math.random() * width; this.y = -20;
-            this.size = Math.random() * 10 + 8;
-            this.vy = Math.random() * 2 + 1;
-            this.vx = Math.random() * 2 - 1;
-            this.angle3D = Math.random() * Math.PI * 2;
-            this.spinSpeed = (Math.random() - 0.5) * 0.1;
-            this.swaySpeed = Math.random() * 0.02 + 0.01;
-            this.swayOffset = Math.random() * Math.PI * 2;
-        }
-        update() {
-            this.y += this.vy;
-            this.x += this.vx + Math.sin(Date.now() * this.swaySpeed + this.swayOffset);
-            this.angle3D += this.spinSpeed;
-        }
-        draw(ctx) {
-            ctx.save();
-            ctx.translate(this.x, this.y);
-            // Simulate 3D flip
-            ctx.scale(Math.cos(this.angle3D), 1);
-            ctx.rotate(Math.PI / 4);
-            ctx.fillStyle = 'rgba(255, 77, 133, 0.8)';
-            ctx.shadowBlur = 10; ctx.shadowColor = 'rgba(255, 77, 133, 0.5)';
-            // Draw petal shape
+        draw() {
             ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.quadraticCurveTo(this.size, 0, this.size, this.size);
-            ctx.quadraticCurveTo(0, this.size, 0, 0);
+            ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(${this.color}, ${Math.max(0, this.alpha)})`;
             ctx.fill();
-            ctx.restore();
         }
     }
 
-    // Init Engine
-    for(let i=0; i<200; i++) stars.push(new Star());
-    for(let i=0; i<3; i++) shootingStars.push(new ShootingStar());
-
-    function animate() {
-        bgCtx.clearRect(0, 0, width, height);
-        fxCtx.clearRect(0, 0, width, height);
-
-        updateAudioData();
-
-        // Background
-        stars.forEach(star => { star.update(); star.draw(bgCtx); });
+    function createFirework() {
+        const x = Math.random() * (w * 0.6) + (w * 0.2);
+        const y = Math.random() * (h * 0.4) + (h * 0.1);
+        const colors = ['212, 175, 55', '253, 245, 201', '255, 255, 255', '180, 130, 255'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
         
-        if(Math.random() < 0.005) shootingStars[Math.floor(Math.random()*shootingStars.length)].spawn();
-        shootingStars.forEach(ss => { ss.update(); ss.draw(bgCtx); });
+        const particleCount = STATE.isMobile ? 25 : 50;
+        for (let i = 0; i < particleCount; i++) {
+            fireworks.push(new FireworkParticle(x, y, color));
+        }
+    }
 
-        // Foreground Effects (Finale)
-        if (isFinale) {
-            if (Math.random() < 0.06) fireworks.push(new Firework());
-            if (Math.random() < 0.2) petals.push(new Petal());
-
-            for (let i = fireworks.length - 1; i >= 0; i--) {
-                fireworks[i].update(); fireworks[i].draw(fxCtx);
-                if (fireworks[i].exploded) fireworks.splice(i, 1);
-            }
-
-            for (let i = particles.length - 1; i >= 0; i--) {
-                particles[i].update(); particles[i].draw(fxCtx);
-                if (particles[i].alpha <= 0) particles.splice(i, 1);
-            }
-
-            for (let i = petals.length - 1; i >= 0; i--) {
-                petals[i].update(); petals[i].draw(fxCtx);
-                if (petals[i].y > height + 50) petals.splice(i, 1);
-            }
+    function animateCanvas() {
+        if (!STATE.isTabActive) {
+            STATE.animFrameId = requestAnimationFrame(animateCanvas);
+            return;
         }
 
-        requestAnimationFrame(animate);
-    }
-    animate();
-
-    /* =========================================================================
-       4. Application Logic & Observers
-       ========================================================================= */
-
-    UI.openBtn.addEventListener('click', () => {
-        isOpened = true;
-        initAudio();
-        UI.bgMusic.play().catch(e => console.log("Audio autoplay prevented", e));
-        UI.musicControls.classList.remove('hidden');
-        document.querySelector('.icon-pause').classList.remove('hidden');
-        document.querySelector('.icon-play').classList.add('hidden');
-
-        UI.openingScreen.style.opacity = '0';
-        UI.openingScreen.style.transform = 'scale(1.1)';
+        ctx.fillStyle = '#030108'; 
+        ctx.fillRect(0, 0, w, h);
         
-        setTimeout(() => {
-            UI.openingScreen.classList.add('hidden');
-            UI.mainContent.classList.remove('hidden');
-            setTimeout(() => UI.heroSection.classList.add('hero-visible'), 100);
+        const grad = ctx.createRadialGradient(w/2, h, 0, w/2, h, h);
+        grad.addColorStop(0, '#140826');
+        grad.addColorStop(1, '#030108');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.globalCompositeOperation = 'lighter';
+
+        stars.forEach(s => { s.update(); s.draw(); });
+        fireflies.forEach(f => { f.update(); f.draw(); });
+
+        if (STATE.fireworksActive) {
+            const chance = (STATE.musicData > 130) ? 0.07 : 0.02;
+            if (Math.random() < chance) createFirework();
             
-            document.body.style.overflowY = 'auto';
-            document.documentElement.style.overflowY = 'auto';
-        }, 2500); 
-    });
-
-    let isPlaying = true;
-    UI.musicToggle.addEventListener('click', () => {
-        if (isPlaying) {
-            UI.bgMusic.pause();
-            document.querySelector('.icon-pause').classList.add('hidden');
-            document.querySelector('.icon-play').classList.remove('hidden');
-        } else {
-            if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-            UI.bgMusic.play();
-            document.querySelector('.icon-play').classList.add('hidden');
-            document.querySelector('.icon-pause').classList.remove('hidden');
-        }
-        isPlaying = !isPlaying;
-    });
-
-    UI.scrollBtn.addEventListener('click', () => document.getElementById('letter').scrollIntoView({ behavior: 'smooth' }));
-
-    // Typewriter
-    let hasTyped = false;
-    const letterTextHtml = `
-        <span class="letter-salutation">Dear Pyari Bauni,</span>
-        <div class="letter-body">
-            Today is a day to celebrate the wonderful person you are.<br><br>
-            Some people have a magic about them—they make the world brighter, warmer, and more beautiful just by being in it. You are quietly one of those rare people.<br><br>
-            I wanted to create something special, something uniquely yours, to remind you of how much you are cared for and appreciated. I hope this little digital corner brings a genuine smile to your face today.<br><br>
-            May your year ahead be filled with peace, exciting adventures, and endless joy. Never lose that beautiful spark.
-        </div>
-        <div class="letter-closing">
-            Happy Birthday,<br>
-            With warmest wishes.
-        </div>
-    `;
-
-    async function typeWriterEffect(element, htmlContent, speed = 25) {
-        element.innerHTML = '';
-        let i = 0, isTag = false, tag = '';
-        return new Promise((resolve) => {
-            function type() {
-                if (i < htmlContent.length) {
-                    let char = htmlContent.charAt(i);
-                    if (char === '<') isTag = true;
-                    if (isTag) {
-                        tag += char;
-                        if (char === '>') { isTag = false; element.innerHTML += tag; tag = ''; }
-                    } else { element.innerHTML += char; }
-                    i++; setTimeout(type, isTag ? 0 : speed + (Math.random()*15)); // Randomize type speed slightly for realism
-                } else {
-                    element.innerHTML += '<span class="typewriter-cursor"></span>';
-                    resolve();
-                }
+            for (let i = fireworks.length - 1; i >= 0; i--) {
+                const p = fireworks[i];
+                p.update();
+                p.draw();
+                if (p.alpha <= 0) fireworks.splice(i, 1);
             }
-            type();
-        });
+        }
+        
+        ctx.globalCompositeOperation = 'source-over';
+        STATE.animFrameId = requestAnimationFrame(animateCanvas);
     }
 
-    const scrollObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                if (entry.target.classList.contains('glass-card')) {
-                    entry.target.classList.add('visible');
-                    if (entry.target.classList.contains('letter-card') && !hasTyped) {
-                        hasTyped = true;
-                        setTimeout(() => typeWriterEffect(UI.typewriterContainer, letterTextHtml, 30), 800);
-                    }
-                }
-                if (entry.target.classList.contains('section-title') || entry.target.classList.contains('gallery-item')) {
-                    if (entry.target.classList.contains('gallery-item')) {
-                        const index = entry.target.getAttribute('data-index');
-                        setTimeout(() => entry.target.classList.add('visible'), index * 200); // Stagger
-                    } else {
-                        entry.target.classList.add('visible');
-                    }
-                }
+    // ==========================================================================
+    // 11. PAGE VISIBILITY MANAGEMENT
+    // ==========================================================================
+    document.addEventListener('visibilitychange', () => {
+        STATE.isTabActive = !document.hidden;
+        if (STATE.isTabActive) {
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
             }
-        });
-    }, { threshold: 0.15, rootMargin: "0px 0px -50px 0px" });
-
-    document.querySelectorAll('.glass-card, .section-title, .gallery-item').forEach(el => scrollObserver.observe(el));
-
-    /* =========================================================================
-       5. Gallery Lightbox Logic (With Captions)
-       ========================================================================= */
-    const galleryData = Array.from(UI.galleryItems).map(item => ({
-        src: item.querySelector('img').src,
-        caption: item.querySelector('.photo-caption-hover').innerText
-    }));
-
-    function openLightbox(index) {
-        currentPhotoIndex = index;
-        UI.lightboxImg.src = galleryData[currentPhotoIndex].src;
-        UI.lightboxCaption.innerText = galleryData[currentPhotoIndex].caption;
-        UI.lightbox.classList.remove('hidden');
-        setTimeout(() => UI.lightbox.classList.add('active'), 
+            if (STATE.audioInitialized) {
+                analyzeAudio();
+            }
+        }
+    });
+});
