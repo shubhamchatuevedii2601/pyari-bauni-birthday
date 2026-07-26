@@ -2,174 +2,140 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <!-- Viewport strictly optimized for mobile to prevent zooming and scaling issues -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Happy Birthday ❤️ Pyari Bauni ❤️</title>
     
-    <!-- Fonts -->
+    <title>Happy Birthday Pyari Bauni ❤️</title>
+    
+    <!-- Preconnect for performance on Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     
+    <!-- Premium Typography: Cinzel (Luxury Headings), Great Vibes (Handwritten Script), Montserrat (Clean Body Text) -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Great+Vibes&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <!-- Core Stylesheet -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Cinematic Preloader -->
-    <div id="preloader">
-        <div class="preloader-text">A moment in time...</div>
-    </div>
-
-    <!-- Background Canvas for Stars, Shooting Stars, Fireflies -->
-    <canvas id="bg-canvas"></canvas>
     
-    <!-- Foreground Canvas for Fireworks, Petals, Hearts -->
-    <canvas id="fx-canvas"></canvas>
+    <!-- Background Audio - CrossOrigin is critical to prevent Web Audio API CORS blocks on GitHub pages -->
+    <audio id="bg-music" src="music/birthday.mp3" preload="auto" loop crossorigin="anonymous"></audio>
 
-    <!-- Custom Cursor Glow -->
-    <div id="cursor-glow"></div>
+    <!-- Canvas for Heavy Physics Effects (Stars, Fireflies, Fireworks) -->
+    <canvas id="effects-canvas" aria-hidden="true"></canvas>
+    
+    <!-- CSS Container for Hardware-Accelerated Effects (Hearts, Petals) to prevent Canvas mobile lag -->
+    <div id="css-particles" aria-hidden="true"></div>
 
-    <!-- Floating Music Controls -->
-    <div id="music-controls" class="hidden">
-        <button id="music-toggle" aria-label="Toggle Music">
-            <svg class="icon-play hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-            <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-        </button>
-    </div>
+    <!-- Desktop Mouse Glow (Disabled on touch devices via CSS/JS) -->
+    <div id="mouse-glow" aria-hidden="true"></div>
 
-    <!-- Audio Element (Crossorigin allowed for Web Audio API if hosted externally, but local is fine) -->
-    <audio id="bg-music" loop crossorigin="anonymous">
-        <source src="music/birthday.mp3" type="audio/mpeg">
-    </audio>
-
-    <!-- Opening Screen -->
-    <div id="opening-screen" class="hidden">
-        <div class="moon" id="interactive-moon"></div>
-        <div class="gift-box">
-            <div class="gift-lid"></div>
-            <div class="gift-body"></div>
-            <div class="gift-bow"></div>
+    <!-- 1. PRELOADER -->
+    <div id="preloader" class="active">
+        <div class="preloader-content">
+            <div class="moon-loader">
+                <div class="moon-crater crater-1"></div>
+                <div class="moon-crater crater-2"></div>
+                <div class="moon-crater crater-3"></div>
+            </div>
+            <p class="loading-text">A moment in time...</p>
         </div>
-        <p class="opening-text fade-in-delay-1">Someone spent time making something special for you...</p>
-        <button id="open-btn" class="fade-in-delay-2">✨ Tap to Open ✨</button>
     </div>
 
-    <!-- Main Content -->
-    <main id="main-content" class="hidden">
+    <!-- MAIN APP WRAPPER (Hidden initially to prevent layout shifts) -->
+    <main id="app-container" class="hidden">
         
-        <!-- Hero Section -->
-        <section id="hero" class="fullscreen-section">
-            <h1 class="title-primary">Happy Birthday</h1>
-            <h2 class="title-secondary">❤️ Pyari Bauni ❤️</h2>
-            <p class="subtitle">"Some people quietly become one of the brightest parts of someone's ordinary days."</p>
-            <button id="scroll-to-letter" class="glow-btn">💌 Open My Letter</button>
+        <!-- 2. OPENING SCREEN -->
+        <section id="opening-screen" class="screen full-height active">
+            <div class="glass-card">
+                <div class="large-moon-bg"></div>
+                <div class="stars-overlay"></div>
+                <button id="open-surprise-btn" class="glow-button" aria-label="Open your birthday surprise">
+                    <span class="btn-text">✨ Open Your Surprise ✨</span>
+                    <div class="btn-glow"></div>
+                </button>
+            </div>
         </section>
 
-        <!-- Letter Section -->
-        <section id="letter" class="content-section">
-            <div class="glass-card letter-card">
-                <div class="wax-seal">❤️</div>
-                <div class="letter-content" id="typewriter-container">
-                    <!-- Text injected by JS for typewriter effect -->
+        <!-- 3. HERO SECTION -->
+        <section id="hero-screen" class="screen full-height">
+            <div class="hero-content">
+                <h1 class="cinematic-title">
+                    <span class="line-one">Happy Birthday</span>
+                    <span class="line-two gradient-text">Pyari Bauni ❤️</span>
+                </h1>
+            </div>
+            <!-- Scroll Indicator with Apple-like minimal design -->
+            <div class="scroll-indicator" aria-hidden="true">
+                <span>Scroll</span>
+                <div class="arrow-down"></div>
+            </div>
+        </section>
+
+        <!-- 4. LETTER SECTION -->
+        <section id="letter-screen" class="screen full-height">
+            <div class="glass-letter-container">
+                <div class="paper-texture">
+                    <div class="typewriter-content" id="typewriter-text" aria-live="polite"></div>
+                    <span class="cursor" id="typewriter-cursor">|</span>
                 </div>
             </div>
         </section>
 
-        <!-- Gallery Section -->
-        <section id="gallery" class="content-section">
-            <h3 class="section-title">Beautiful Memories</h3>
+        <!-- 5. GALLERY SECTION -->
+        <section id="gallery-screen" class="screen">
+            <h2 class="section-title">Precious Memories</h2>
             <div class="gallery-grid">
-                <!-- Gallery Item 1 -->
-                <div class="gallery-item" data-index="0">
+                <!-- Gallery items include a skeleton loader to prevent UI breakage if images load slowly -->
+                <div class="gallery-item glass-card-image">
+                    <div class="image-skeleton"></div>
                     <img src="photos/1.jpg" alt="Memory 1" loading="lazy">
-                    <div class="glass-overlay">
-                        <span class="view-icon">✨</span>
-                        <p class="photo-caption-hover">Your smile lights up the room...</p>
-                    </div>
-                    <p class="photo-caption-bottom">Your smile lights up the room...</p>
                 </div>
-                <!-- Gallery Item 2 -->
-                <div class="gallery-item" data-index="1">
+                <div class="gallery-item glass-card-image">
+                    <div class="image-skeleton"></div>
                     <img src="photos/2.jpg" alt="Memory 2" loading="lazy">
-                    <div class="glass-overlay">
-                        <span class="view-icon">✨</span>
-                        <p class="photo-caption-hover">A moment of pure joy...</p>
-                    </div>
-                    <p class="photo-caption-bottom">A moment of pure joy...</p>
                 </div>
-                <!-- Gallery Item 3 -->
-                <div class="gallery-item" data-index="2">
+                <div class="gallery-item glass-card-image">
+                    <div class="image-skeleton"></div>
                     <img src="photos/3.jpg" alt="Memory 3" loading="lazy">
-                    <div class="glass-overlay">
-                        <span class="view-icon">✨</span>
-                        <p class="photo-caption-hover">Elegance in every step...</p>
-                    </div>
-                    <p class="photo-caption-bottom">Elegance in every step...</p>
                 </div>
-                <!-- Gallery Item 4 -->
-                <div class="gallery-item" data-index="3">
+                <div class="gallery-item glass-card-image">
+                    <div class="image-skeleton"></div>
                     <img src="photos/4.jpg" alt="Memory 4" loading="lazy">
-                    <div class="glass-overlay">
-                        <span class="view-icon">✨</span>
-                        <p class="photo-caption-hover">Simply beautiful...</p>
-                    </div>
-                    <p class="photo-caption-bottom">Simply beautiful...</p>
                 </div>
-                <!-- Gallery Item 5 -->
-                <div class="gallery-item" data-index="4">
+                <div class="gallery-item glass-card-image">
+                    <div class="image-skeleton"></div>
                     <img src="photos/5.jpg" alt="Memory 5" loading="lazy">
-                    <div class="glass-overlay">
-                        <span class="view-icon">✨</span>
-                        <p class="photo-caption-hover">Eyes that hold the stars...</p>
-                    </div>
-                    <p class="photo-caption-bottom">Eyes that hold the stars...</p>
                 </div>
-                <!-- Gallery Item 6 -->
-                <div class="gallery-item" data-index="5">
+                <div class="gallery-item glass-card-image">
+                    <div class="image-skeleton"></div>
                     <img src="photos/6.jpg" alt="Memory 6" loading="lazy">
-                    <div class="glass-overlay">
-                        <span class="view-icon">✨</span>
-                        <p class="photo-caption-hover">A memory to cherish forever.</p>
-                    </div>
-                    <p class="photo-caption-bottom">A memory to cherish forever.</p>
                 </div>
             </div>
         </section>
 
-        <!-- Lightbox -->
-        <div id="lightbox" class="hidden">
-            <div class="lightbox-bg"></div>
-            <button class="lightbox-close">&times;</button>
-            <button class="lightbox-prev">&#10094;</button>
-            <div class="lightbox-content-wrapper">
-                <img id="lightbox-img" src="" alt="Enlarged Memory">
-                <p id="lightbox-caption"></p>
+        <!-- 8. FINAL SCENE (Fireworks will render on the canvas behind this) -->
+        <section id="final-screen" class="screen full-height">
+            <div class="final-content">
+                <div class="huge-glowing-moon"></div>
+                <h1 class="final-title">Happy Birthday Pyari Bauni ❤️</h1>
+                <p class="final-subtitle">Thank You For Being Such A Beautiful Part<br>Of My Life ❤️</p>
             </div>
-            <button class="lightbox-next">&#10095;</button>
-        </div>
-
-        <!-- Surprise Ending Trigger -->
-        <section id="ending-trigger" class="fullscreen-section">
-            <p class="ending-hint">A final surprise awaits...</p>
-            <div id="glowing-heart-btn" class="pulse-heart sound-reactive-heart">❤️</div>
         </section>
-        
+
     </main>
 
-    <!-- Surprise Ending Screen -->
-    <div id="surprise-screen" class="hidden">
-        <h1 class="cinematic-title">❤️ Happy Birthday Pyari Bauni ❤️</h1>
-        <p class="cinematic-msg delay-1">"I hope life always gives you reasons to smile."</p>
-        <div class="cinematic-msg delay-2 blessing">
-            <span>Stay happy.</span><br>
-            <span>Stay blessed.</span><br>
-            <span>Keep smiling.</span>
-        </div>
-        <div class="cinematic-footer delay-3">
-            <p>Made with ❤️</p>
-            <p class="signature">Especially for</p>
-            <p class="signature-name">✨ Pyari Bauni ✨</p>
+    <!-- FULLSCREEN IMAGE MODAL -->
+    <div id="image-modal" class="modal hidden" aria-modal="true" role="dialog">
+        <button class="close-modal" aria-label="Close fullscreen image">&times;</button>
+        <div class="modal-content-wrapper">
+            <div class="modal-loader hidden"></div>
+            <img id="modal-image" src="" alt="Fullscreen Memory">
         </div>
     </div>
 
+    <!-- Main Logic -->
     <script src="script.js"></script>
 </body>
 </html>
