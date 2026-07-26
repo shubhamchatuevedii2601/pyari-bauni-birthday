@@ -1,40 +1,33 @@
-*{
-  margin:0;
-  padding:0;
-  box-sizing:border-box;
+const text =
+"Dear Pyari Bauni 💜,\n\nWishing you a day filled with smiles, happiness, peace and beautiful memories. May every dream you have find its way to reality.\n\n✨ Happy Birthday! ✨";
+
+let i = 0;
+
+const typing = document.getElementById("typing");
+
+typing.innerHTML = "";
+
+function typeWriter() {
+    if (i < text.length) {
+        typing.innerHTML += text.charAt(i);
+        i++;
+        setTimeout(typeWriter, 35);
+    }
 }
 
-body{
-  font-family:Arial,sans-serif;
-  background:linear-gradient(135deg,#050816,#14002c,#220044);
-  color:#fff;
-  overflow-x:hidden;
-}
+window.onload = () => {
+    setTimeout(typeWriter, 1500);
+};
 
-section{
-  min-height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  flex-direction:column;
-  text-align:center;
-  padding:20px;
-}
+document.getElementById("startBtn").addEventListener("click", () => {
+    document.getElementById("message").scrollIntoView({
+        behavior: "smooth"
+    });
+});
 
-h1{
-  font-size:3rem;
-  color:#ff8be8;
-  text-shadow:0 0 20px #ff4dd2;
-}
-
-p{
-  max-width:700px;
-  margin-top:20px;
-  line-height:1.8;
-  font-size:1.1rem;
-}
-
-button{
+document.getElementById("cakeBtn").addEventListener("click", () => {
+    alert("🎉 Happy Birthday Pyari Bauni! Make a beautiful wish! 💜");
+});button{
   margin-top:30px;
   padding:14px 35px;
   border:none;
