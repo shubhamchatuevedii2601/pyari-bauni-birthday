@@ -1,1 +1,56 @@
+/* ===========================
+   Moonlit Wishes
+   style.css
+=========================== */
 
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+html{
+    scroll-behavior:smooth;
+}
+
+body{
+    font-family:'Poppins',sans-serif;
+    background:linear-gradient(180deg,#081229,#0b1735,#162447);
+    color:#fff;
+    overflow-x:hidden;
+}
+
+/* Loader */
+
+#loader{
+    position:fixed;
+    inset:0;
+    background:#081229;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    z-index:9999;
+    cursor:pointer;
+}
+
+#loader h1{
+    font-size:70px;
+    animation:float 2s infinite ease-in-out;
+}
+
+#loader p{
+    margin-top:15px;
+    font-size:18px;
+    letter-spacing:2px;
+}
+
+/* Stars */
+
+#stars{
+    position:fixed;
+    inset:0;
+    background-image:
+    radial-gradient(white 1px,transparent 1px),
+    radial-gradient(white 1px,transparent 1px);
+    background-size:120px 120px,180px 180px
