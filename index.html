@@ -1,141 +1,205 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="lenis-smooth">
 <head>
     <meta charset="UTF-8">
-    <!-- Viewport strictly optimized for mobile to prevent zooming and scaling issues -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     
-    <title>Happy Birthday Pyari Bauni ❤️</title>
+    <title>Happy Birthday Pyari Bauni ❤️ | A Cinematic Journey</title>
     
-    <!-- Preconnect for performance on Google Fonts -->
+    <!-- Resource Hints for Performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="image" href="photos/1.jpg">
+    <link rel="preload" as="audio" href="music/birthday.mp3">
     
-    <!-- Premium Typography: Cinzel (Luxury Headings), Great Vibes (Handwritten Script), Montserrat (Clean Body Text) -->
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Great+Vibes&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+    <!-- Premium Typography Selection -->
+    <!-- Playfair Display for Luxury Headings, Montserrat for Clean UI, WindSong for intimate handwriting -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;300;400;500&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=WindSong:wght@400;500&display=swap" rel="stylesheet">
     
-    <!-- Core Stylesheet -->
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="loading">
+
+    <!-- Global Audio Context -->
+    <audio id="cinematic-score" src="music/birthday.mp3" preload="auto" loop crossorigin="anonymous"></audio>
+
+    <!-- Custom Magnetic Cursor -->
+    <div id="custom-cursor" aria-hidden="true">
+        <div class="cursor-dot"></div>
+        <div class="cursor-ring"></div>
+        <div class="cursor-text">View</div>
+    </div>
+
+    <!-- Canvas Layer for High-Performance Physics (Moon, Stars, Floating Dust, Particles) -->
+    <canvas id="webgl-canvas" aria-hidden="true"></canvas>
     
-    <!-- Background Audio - CrossOrigin is critical to prevent Web Audio API CORS blocks on GitHub pages -->
-    <audio id="bg-music" src="music/birthday.mp3" preload="auto" loop crossorigin="anonymous"></audio>
+    <!-- Global UI Overlay (Scroll Progress, Audio Toggle) -->
+    <nav class="global-ui hidden" aria-hidden="true">
+        <div class="progress-container">
+            <div class="progress-bar" id="scroll-progress"></div>
+        </div>
+        <div class="sound-toggle" id="sound-toggle">
+            <span class="sound-wave w1"></span>
+            <span class="sound-wave w2"></span>
+            <span class="sound-wave w3"></span>
+        </div>
+    </nav>
 
-    <!-- Canvas for Heavy Physics Effects (Stars, Fireflies, Fireworks) -->
-    <canvas id="effects-canvas" aria-hidden="true"></canvas>
-    
-    <!-- CSS Container for Hardware-Accelerated Effects (Hearts, Petals) to prevent Canvas mobile lag -->
-    <div id="css-particles" aria-hidden="true"></div>
-
-    <!-- Desktop Mouse Glow (Disabled on touch devices via CSS/JS) -->
-    <div id="mouse-glow" aria-hidden="true"></div>
-
-    <!-- 1. PRELOADER -->
+    <!-- 1. CINEMATIC PRELOADER -->
     <div id="preloader" class="active">
-        <div class="preloader-content">
-            <div class="moon-loader">
-                <div class="moon-crater crater-1"></div>
-                <div class="moon-crater crater-2"></div>
-                <div class="moon-crater crater-3"></div>
+        <div class="preloader-wrapper">
+            <div class="eclipse-loader">
+                <div class="moon-sphere"></div>
+                <div class="light-flare"></div>
             </div>
-            <p class="loading-text">A moment in time...</p>
+            <div class="loading-typography">
+                <span class="load-text">Tuning the universe</span>
+                <span class="load-dots">...</span>
+            </div>
         </div>
     </div>
 
-    <!-- MAIN APP WRAPPER (Hidden initially to prevent layout shifts) -->
-    <main id="app-container" class="hidden">
+    <!-- 2. SCROLL WRAPPER (For Smooth Scrolling & Parallax Context) -->
+    <main id="smooth-wrapper" class="hidden">
         
-        <!-- 2. OPENING SCREEN -->
-        <section id="opening-screen" class="screen full-height active">
-            <div class="glass-card">
-                <div class="large-moon-bg"></div>
-                <div class="stars-overlay"></div>
-                <button id="open-surprise-btn" class="glow-button" aria-label="Open your birthday surprise">
-                    <span class="btn-text">✨ Open Your Surprise ✨</span>
-                    <div class="btn-glow"></div>
-                </button>
-            </div>
-        </section>
-
-        <!-- 3. HERO SECTION -->
-        <section id="hero-screen" class="screen full-height">
-            <div class="hero-content">
-                <h1 class="cinematic-title">
-                    <span class="line-one">Happy Birthday</span>
-                    <span class="line-two gradient-text">Pyari Bauni ❤️</span>
-                </h1>
-            </div>
-            <!-- Scroll Indicator with Apple-like minimal design -->
-            <div class="scroll-indicator" aria-hidden="true">
-                <span>Scroll</span>
-                <div class="arrow-down"></div>
-            </div>
-        </section>
-
-        <!-- 4. LETTER SECTION -->
-        <section id="letter-screen" class="screen full-height">
-            <div class="glass-letter-container">
-                <div class="paper-texture">
-                    <div class="typewriter-content" id="typewriter-text" aria-live="polite"></div>
-                    <span class="cursor" id="typewriter-cursor">|</span>
+        <!-- SCENE 0: THE INVITATION -->
+        <section id="scene-intro" class="cinematic-scene vh-100 lock-scroll">
+            <div class="glass-portal">
+                <div class="portal-content">
+                    <h1 class="portal-title">A Story Waiting To Be Told</h1>
+                    <p class="portal-subtitle">Headphones recommended. Best experienced in full screen.</p>
+                    <button id="begin-journey-btn" class="apple-glass-btn magnetic-btn">
+                        <span class="btn-text">✨ Enter Our Universe ✨</span>
+                        <div class="btn-shine"></div>
+                    </button>
                 </div>
             </div>
         </section>
 
-        <!-- 5. GALLERY SECTION -->
-        <section id="gallery-screen" class="screen">
-            <h2 class="section-title">Precious Memories</h2>
-            <div class="gallery-grid">
-                <!-- Gallery items include a skeleton loader to prevent UI breakage if images load slowly -->
-                <div class="gallery-item glass-card-image">
-                    <div class="image-skeleton"></div>
-                    <img src="photos/1.jpg" alt="Memory 1" loading="lazy">
+        <!-- SCENE 1: THE REVEAL (Hero) -->
+        <section id="scene-hero" class="cinematic-scene vh-150">
+            <div class="sticky-container">
+                <div class="hero-typography parallax-layer" data-speed="0.8">
+                    <div class="reveal-text line-1">Happy Birthday</div>
+                    <div class="reveal-text line-2 windsong-text gradient-gold">Pyari Bauni ❤️</div>
                 </div>
-                <div class="gallery-item glass-card-image">
-                    <div class="image-skeleton"></div>
-                    <img src="photos/2.jpg" alt="Memory 2" loading="lazy">
-                </div>
-                <div class="gallery-item glass-card-image">
-                    <div class="image-skeleton"></div>
-                    <img src="photos/3.jpg" alt="Memory 3" loading="lazy">
-                </div>
-                <div class="gallery-item glass-card-image">
-                    <div class="image-skeleton"></div>
-                    <img src="photos/4.jpg" alt="Memory 4" loading="lazy">
-                </div>
-                <div class="gallery-item glass-card-image">
-                    <div class="image-skeleton"></div>
-                    <img src="photos/5.jpg" alt="Memory 5" loading="lazy">
-                </div>
-                <div class="gallery-item glass-card-image">
-                    <div class="image-skeleton"></div>
-                    <img src="photos/6.jpg" alt="Memory 6" loading="lazy">
+                <div class="scroll-down-indicator parallax-layer" data-speed="1.2">
+                    <div class="mouse-shape">
+                        <div class="wheel"></div>
+                    </div>
+                    <span class="scroll-label">Scroll to explore</span>
                 </div>
             </div>
         </section>
 
-        <!-- 8. FINAL SCENE (Fireworks will render on the canvas behind this) -->
-        <section id="final-screen" class="screen full-height">
-            <div class="final-content">
-                <div class="huge-glowing-moon"></div>
-                <h1 class="final-title">Happy Birthday Pyari Bauni ❤️</h1>
-                <p class="final-subtitle">Thank You For Being Such A Beautiful Part<br>Of My Life ❤️</p>
+        <!-- SCENE 2: THE LETTER (Floating Depth & Typewriter) -->
+        <section id="scene-letter" class="cinematic-scene vh-100">
+            <div class="3d-perspective-container">
+                <div class="glass-letter floating-element">
+                    <div class="letter-lighting-sweep"></div>
+                    <p class="typewriter-canvas" id="main-letter-text" aria-live="polite"></p>
+                    <span class="typing-cursor">_</span>
+                </div>
             </div>
         </section>
 
+        <!-- SCENE 3: CHAPTER 1 - ASYMMETRICAL FLOATING LAYOUT (Teasing) -->
+        <section id="chapter-1" class="cinematic-scene chapter-scene layout-asymmetric">
+            <div class="chapter-content">
+                <div class="media-wrapper parallax-layer" data-speed="0.9">
+                    <div class="image-reveal-mask">
+                        <img src="photos/1.jpg" alt="Chapter 1" class="parallax-image scale-on-scroll">
+                    </div>
+                </div>
+                <div class="text-wrapper parallax-layer glass-panel" data-speed="1.1">
+                    <h2 class="story-title">✨ Excuse Me... Who Allowed You To Look This Cute?</h2>
+                    <p class="story-body">"I was trying to stay focused... then this smile happened. Totally unfair. 😌❤️"</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SCENE 4: CHAPTER 2 - CINEMASCOPE WIDE CROP (Flirting) -->
+        <section id="chapter-2" class="cinematic-scene chapter-scene layout-cinemascope">
+            <div class="full-width-mask">
+                <img src="photos/2.jpg" alt="Chapter 2" class="parallax-image slow-pan">
+                <div class="cinematic-vignette"></div>
+                <div class="floating-text-center parallax-layer" data-speed="1.3">
+                    <h2 class="story-title">🌸 Illegal Level of Cuteness</h2>
+                    <p class="story-body">"I think you should start carrying a warning sign... because hearts are clearly in danger around you. 🤭"</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SCENE 5: CHAPTER 3 - SPLIT SCREEN INTERSECTION (Cute) -->
+        <section id="chapter-3" class="cinematic-scene chapter-scene layout-split">
+            <div class="split-left">
+                <div class="text-content parallax-layer" data-speed="0.8">
+                    <h2 class="story-title">💛 Smile Tax</h2>
+                    <p class="story-body">"Every time you smile, I lose one more argument with my heart."</p>
+                </div>
+            </div>
+            <div class="split-right">
+                <div class="bubble-mask parallax-layer" data-speed="1.2">
+                    <img src="photos/3.jpg" alt="Chapter 3" class="bubble-image">
+                </div>
+            </div>
+        </section>
+
+        <!-- SCENE 6: CHAPTER 4 - POLAROID SCATTER (Caught) -->
+        <section id="chapter-4" class="cinematic-scene chapter-scene layout-scatter">
+            <div class="scatter-container">
+                <div class="polaroid-frame floating-element" data-rotate="-5deg">
+                    <img src="photos/4.jpg" alt="Chapter 4" class="polaroid-image">
+                    <div class="polaroid-glare"></div>
+                </div>
+                <div class="scatter-text glass-panel parallax-layer" data-speed="1.1">
+                    <h2 class="story-title">📸 Caught Red Handed</h2>
+                    <p class="story-body">"Trying to act innocent after stealing all the attention? Nice try. 😏"</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SCENE 7: CHAPTER 5 - SPOTLIGHT FOCUS (Romantic) -->
+        <section id="chapter-5" class="cinematic-scene chapter-scene layout-spotlight">
+            <div class="spotlight-bg"></div>
+            <div class="spotlight-content">
+                <div class="elegant-frame parallax-layer" data-speed="0.9">
+                    <img src="photos/5.jpg" alt="Chapter 5" class="elegant-image">
+                </div>
+                <div class="spotlight-text parallax-layer" data-speed="1.2">
+                    <h2 class="story-title">🌙 My Favourite View</h2>
+                    <p class="story-body">"I've seen beautiful sunsets... but somehow this picture still wins."</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SCENE 8: CHAPTER 6 - FULLSCREEN FADE INTO EMOTION (Emotional) -->
+        <section id="chapter-6" class="cinematic-scene chapter-scene layout-fullscreen-fade">
+            <div class="fade-bg-wrapper">
+                <img src="photos/6.jpg" alt="Chapter 6" class="bg-image blurred-bg">
+                <div class="dark-gradient-overlay"></div>
+            </div>
+            <div class="centered-glass-content parallax-layer" data-speed="1.1">
+                <h2 class="story-title text-glow">❤️ Mission Failed Successfully</h2>
+                <p class="story-body">"I told myself I wouldn't get attached... then you smiled. End of story. 🤍"</p>
+            </div>
+        </section>
+
+        <!-- SCENE 9: THE FINALE -->
+        <section id="scene-finale" class="cinematic-scene vh-150">
+            <div class="sticky-finale">
+                <div class="grand-moon-container">
+                    <div class="moon-halo"></div>
+                    <div class="moon-texture"></div>
+                </div>
+                <div class="finale-typography parallax-layer" data-speed="1.2">
+                    <h1 class="finale-title windsong-text">Happy Birthday Pyari Bauni ❤️</h1>
+                    <p class="finale-subtitle">Thank You For Being Such A Beautiful Part Of My Life</p>
+                </div>
+            </div>
+        </section>
+        
     </main>
 
-    <!-- FULLSCREEN IMAGE MODAL -->
-    <div id="image-modal" class="modal hidden" aria-modal="true" role="dialog">
-        <button class="close-modal" aria-label="Close fullscreen image">&times;</button>
-        <div class="modal-content-wrapper">
-            <div class="modal-loader hidden"></div>
-            <img id="modal-image" src="" alt="Fullscreen Memory">
-        </div>
-    </div>
-
-    <!-- Main Logic -->
-    <script src="script.js"></script>
 </body>
 </html>
