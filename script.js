@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'use strict';
 
     // ==========================================================================
-    // 1. STATE & DOM CACHING
+    // 1. STATE & DOM CACHING (Strict Null Checks Applied)
     // ==========================================================================
     const DOM = {
         body: document.body,
@@ -20,10 +20,13 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas: document.getElementById('webgl-canvas'),
         typewriter: document.getElementById('main-letter-text'),
         parallaxLayers: document.querySelectorAll('.parallax-layer'),
-        scenes: document.querySelectorAll('.cinematic-scene')
+        scenes: document.querySelectorAll('.cinematic-scene'),
+        glassLetter: document.querySelector('.glass-letter')
     };
 
     const STATE = {
+        isAppInitialized: false,
+        isCanvasInitialized: false,
         isMobile: window.innerWidth <= 768,
         isTouch: ('ontouchstart' in window) || (navigator.maxTouchPoints > 0),
         audioContext: null,
@@ -39,29 +42,29 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // ==========================================================================
-    // 2. PRELOADER & INITIALIZATION
+    // 2. PRELOADER & INITIALIZATION (Fixed Double Execution)
     // ==========================================================================
     const initApp = () => {
-        // Wait a minimum time for the cinematic loader effect
+        if (STATE.isAppInitialized) return; // Prevent duplicate triggers
+        STATE.isAppInitialized = true;
+        
         setTimeout(() => {
             if (DOM.preloader) {
                 DOM.preloader.classList.remove('active');
                 setTimeout(() => {
-                    DOM.preloader.remove(); // Remove completely from DOM
-                    DOM.smoothWrapper.classList.remove('hidden');
-                    DOM.body.classList.remove('loading');
+                    DOM.preloader.remove(); 
+                    if (DOM.smoothWrapper) DOM.smoothWrapper.classList.remove('hidden');
+                    if (DOM.body) DOM.body.classList.remove('loading');
                 }, 1500);
             }
         }, 3000);
     };
 
-    // Trigger init on load
     window.addEventListener('load', initApp);
-    // Fallback if load fails
-    setTimeout(initApp, 5000);
+    setTimeout(initApp, 5000); // Fallback execution
 
     // ==========================================================================
-    // 3. AUDIO ENGINE (Web Audio API for iOS compliance)
+    // 3. AUDIO ENGINE (Strict Error Handling for iOS)
     // ==========================================================================
     const initAudio = async () => {
         if (!DOM.audio) return;
@@ -69,17 +72,23 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             if (!STATE.audioContext) {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
-                STATE.audioContext = new AudioContext();
+                if (AudioContext) {
+                    STATE.audioContext = new AudioContext();
+                }
             }
             
-            if (STATE.audioContext.state === 'suspended') {
+            if (STATE.audioContext && STATE.audioContext.state === 'suspended') {
                 await STATE.audioContext.resume();
             }
             
             DOM.audio.volume = 0.5;
-            await DOM.audio.play();
-            STATE.isPlaying = true;
-            DOM.soundToggle.classList.add('playing');
+            const playPromise = DOM.audio.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    STATE.isPlaying = true;
+                    if (DOM.soundToggle) DOM.soundToggle.classList.add('playing');
+                }).catch(err => console.warn("Audio initiation blocked:", err));
+            }
         } catch (error) {
             console.warn("Audio playback prevented:", error);
         }
@@ -90,11 +99,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (STATE.isPlaying) {
             DOM.audio.pause();
             STATE.isPlaying = false;
-            DOM.soundToggle.classList.remove('playing');
+            if (DOM.soundToggle) DOM.soundToggle.classList.remove('playing');
         } else {
-            DOM.audio.play();
-            STATE.isPlaying = true;
-            DOM.soundToggle.classList.add('playing');
+            const playPromise = DOM.audio.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    STATE.isPlaying = true;
+                    if (DOM.soundToggle) DOM.soundToggle.classList.add('playing');
+                }).catch(err => console.warn("Audio play blocked by browser policy:", err));
+            }
         }
     };
 
@@ -103,22 +116,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================================================
-    // 4. ENTER JOURNEY (Button Logic)
+    // 4. ENTER JOURNEY (Button Logic & Scroll Unlocking)
     // ==========================================================================
-    if (DOM.beginBtn) {
+    if (DOM.beginBtn && DOM.introScene) {
         DOM.beginBtn.addEventListener('click', () => {
             initAudio();
             
-            // Fade out intro, unlock scroll
             DOM.introScene.style.opacity = '0';
             DOM.introScene.style.pointerEvents = 'none';
             
             setTimeout(() => {
                 DOM.introScene.classList.remove('lock-scroll');
-                DOM.introScene.style.display = 'none';
-                DOM.globalUi.classList.remove('hidden');
+                DOM.introScene.style.display = 'none'; // Completely removes from layout flow
+                if (DOM.globalUi) DOM.globalUi.classList.remove('hidden');
                 
-                // Start Render Loop once in the experience
                 startRenderLoop();
             }, 1200);
         });
@@ -132,58 +143,54 @@ document.addEventListener('DOMContentLoaded', () => {
             STATE.mouse.x = e.clientX;
             STATE.mouse.y = e.clientY;
             
-            // Instant snap for dot
             if (DOM.cursorDot) {
-                DOM.cursorDot.style.transform = `translate(${e.clientX}px, ${e.clientY}px) translate(-50%, -50%)`;
+                DOM.cursorDot.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0) translate(-50%, -50%)`;
             }
-        });
+        }, { passive: true });
 
-        // Hover states for interactive elements
         const interactiveElements = document.querySelectorAll('button, a, .sound-toggle, .glass-panel, .polaroid-frame');
         interactiveElements.forEach(el => {
             el.addEventListener('mouseenter', () => DOM.cursor.classList.add('hovering'));
             el.addEventListener('mouseleave', () => DOM.cursor.classList.remove('hovering'));
         });
 
-        // Magnetic Button Effect
         if (DOM.beginBtn) {
             DOM.beginBtn.addEventListener('mousemove', (e) => {
                 const rect = DOM.beginBtn.getBoundingClientRect();
                 const x = e.clientX - rect.left - rect.width / 2;
                 const y = e.clientY - rect.top - rect.height / 2;
-                
-                DOM.beginBtn.style.transform = `translate(${x * 0.2}px, ${y * 0.2}px)`;
-            });
+                DOM.beginBtn.style.transform = `translate3d(${x * 0.2}px, ${y * 0.2}px, 0)`;
+            }, { passive: true });
             
             DOM.beginBtn.addEventListener('mouseleave', () => {
-                DOM.beginBtn.style.transform = `translate(0px, 0px)`;
+                DOM.beginBtn.style.transform = `translate3d(0px, 0px, 0)`;
             });
         }
     }
 
     // ==========================================================================
-    // 6. INTERSECTION OBSERVERS (Scene triggers, 3D letter, Typing)
+    // 6. INTERSECTION OBSERVERS
     // ==========================================================================
-    const sceneObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('scene-active');
-                entry.target.setAttribute('data-visible', 'true');
-            } else {
-                entry.target.setAttribute('data-visible', 'false');
-            }
-        });
-    }, { threshold: 0.15 });
+    if (DOM.scenes.length > 0) {
+        const sceneObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('scene-active');
+                    entry.target.setAttribute('data-visible', 'true');
+                } else {
+                    entry.target.setAttribute('data-visible', 'false');
+                }
+            });
+        }, { threshold: 0.15 });
 
-    DOM.scenes.forEach(scene => sceneObserver.observe(scene));
+        DOM.scenes.forEach(scene => sceneObserver.observe(scene));
+    }
 
-    // Specific observer for the 3D Glass Letter
-    const letterEl = document.querySelector('.glass-letter');
-    if (letterEl) {
+    if (DOM.glassLetter) {
         const letterObserver = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
-                    letterEl.classList.add('in-view');
+                    DOM.glassLetter.classList.add('in-view');
                     if (!STATE.isTyping) {
                         STATE.isTyping = true;
                         startTypewriter();
@@ -191,7 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }, { threshold: 0.4 });
-        letterObserver.observe(letterEl);
+        letterObserver.observe(DOM.glassLetter);
     }
 
     // ==========================================================================
@@ -209,7 +216,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 DOM.typewriter.innerHTML += char === '\n' ? '<br>' : char;
                 charIndex++;
                 
-                // Randomize typing speed for human feel (30ms to 80ms)
                 const speed = Math.random() * 50 + 30;
                 setTimeout(type, speed);
             } else {
@@ -217,49 +223,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (cursor) cursor.style.animation = 'blink 2s step-end infinite';
             }
         }
-        setTimeout(type, 1000); // 1 second delay after rotating in
+        setTimeout(type, 1000); 
     }
 
     // ==========================================================================
-    // 8. SCROLL & PARALLAX ENGINE (Vanilla requestAnimationFrame)
+    // 8. SCROLL & PARALLAX ENGINE
     // ==========================================================================
     window.addEventListener('scroll', () => {
         STATE.targetScrollY = window.scrollY;
     }, { passive: true });
 
     function updateParallax() {
-        // Linear Interpolation (Lerp) for smooth scroll feel
         STATE.scrollDelta = STATE.targetScrollY - STATE.scrollY;
-        STATE.scrollY += STATE.scrollDelta * 0.1; // 0.1 is the easing factor
+        STATE.scrollY += STATE.scrollDelta * 0.1;
         
-        // Update Scroll Progress Bar
         if (DOM.progressBar) {
-            const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+            const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
             const progress = (STATE.scrollY / maxScroll) * 100;
             DOM.progressBar.style.height = `${Math.min(100, Math.max(0, progress))}%`;
         }
 
-        // Apply Parallax to active scenes only for performance
-        DOM.parallaxLayers.forEach(layer => {
-            // Find parent scene
-            const parentScene = layer.closest('.cinematic-scene');
-            if (parentScene && parentScene.getAttribute('data-visible') === 'true') {
-                const speed = parseFloat(layer.getAttribute('data-speed')) || 1;
-                
-                // Calculate distance from center of viewport
-                const rect = layer.getBoundingClientRect();
-                const centerOffset = (rect.top + rect.height / 2) - (STATE.viewportHeight / 2);
-                
-                // Core parallax formula
-                const yOffset = centerOffset * (1 - speed);
-                
-                layer.style.transform = `translate3d(0, ${yOffset}px, 0)`;
-            }
-        });
+        if (DOM.parallaxLayers && DOM.parallaxLayers.length > 0) {
+            DOM.parallaxLayers.forEach(layer => {
+                const parentScene = layer.closest('.cinematic-scene');
+                if (parentScene && parentScene.getAttribute('data-visible') === 'true') {
+                    const speed = parseFloat(layer.getAttribute('data-speed')) || 1;
+                    const rect = layer.getBoundingClientRect();
+                    const centerOffset = (rect.top + rect.height / 2) - (STATE.viewportHeight / 2);
+                    const yOffset = centerOffset * (1 - speed);
+                    
+                    layer.style.transform = `translate3d(0, ${yOffset}px, 0)`;
+                }
+            });
+        }
     }
 
     // ==========================================================================
-    // 9. HIGH-PERFORMANCE CANVAS ENGINE (Stars, Floating Dust)
+    // 9. HIGH-PERFORMANCE CANVAS ENGINE (Strict Duplication Prevention)
     // ==========================================================================
     let ctx, w, h;
     let particles = [];
@@ -274,14 +274,15 @@ document.addEventListener('DOMContentLoaded', () => {
             resizeCanvas();
         }, { passive: true });
 
-        // Generate particles based on device capability
-        const count = STATE.isMobile ? 80 : 200;
+        const count = STATE.isMobile ? 60 : 150;
+        particles = []; // Ensure clear on re-init
         for (let i = 0; i < count; i++) {
             particles.push(new Particle());
         }
     }
 
     function resizeCanvas() {
+        if (!DOM.canvas) return;
         w = DOM.canvas.width = window.innerWidth;
         h = DOM.canvas.height = window.innerHeight;
     }
@@ -290,7 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
         constructor() {
             this.x = Math.random() * (w || window.innerWidth);
             this.y = Math.random() * (h || window.innerHeight);
-            this.z = Math.random() * 2 + 0.1; // Depth (Parallax factor)
+            this.z = Math.random() * 2 + 0.1; 
             this.size = (Math.random() * 1.5 + 0.5) / this.z;
             this.alpha = Math.random();
             this.targetAlpha = Math.random();
@@ -299,15 +300,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         update() {
-            // Natural drift
             this.x += this.vx;
             this.y += this.vy;
-
-            // React to Scroll (Parallax depth effect)
-            // Faster particles are "closer"
             this.y -= (STATE.scrollDelta * 0.05) / this.z;
 
-            // React to Mouse subtly
             if (!STATE.isTouch) {
                 const dx = STATE.mouse.x - this.x;
                 const dy = STATE.mouse.y - this.y;
@@ -318,13 +314,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Twinkle effect
             this.alpha += (this.targetAlpha - this.alpha) * 0.02;
             if (Math.abs(this.alpha - this.targetAlpha) < 0.1) {
                 this.targetAlpha = Math.random();
             }
 
-            // Screen Wrap
             if (this.x < 0) this.x = w;
             if (this.x > w) this.x = 0;
             if (this.y < 0) this.y = h;
@@ -332,6 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         draw() {
+            if (!ctx) return;
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
             ctx.fillStyle = `rgba(253, 245, 201, ${this.alpha * 0.8})`;
@@ -342,7 +337,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderCanvas() {
         if (!ctx) return;
         
-        // Deep cinematic background redraw
         ctx.fillStyle = '#020104'; 
         ctx.fillRect(0, 0, w, h);
         
@@ -363,17 +357,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================================================
-    // 10. MASTER RENDER LOOP (RAF)
+    // 10. MASTER RENDER LOOP & TAB VISIBILITY MANAGEMENT (No Memory Leaks)
     // ==========================================================================
     function startRenderLoop() {
-        initCanvas();
+        if (!STATE.isCanvasInitialized) {
+            initCanvas();
+            STATE.isCanvasInitialized = true;
+        }
+        
+        if (STATE.rafId) {
+            cancelAnimationFrame(STATE.rafId);
+        }
         
         function tick() {
-            // Update Cursor Lerp
             if (!STATE.isTouch && DOM.cursorRing) {
                 STATE.cursorLerp.x += (STATE.mouse.x - STATE.cursorLerp.x) * 0.15;
                 STATE.cursorLerp.y += (STATE.mouse.y - STATE.cursorLerp.y) * 0.15;
-                DOM.cursorRing.style.transform = `translate(${STATE.cursorLerp.x}px, ${STATE.cursorLerp.y}px) translate(-50%, -50%)`;
+                DOM.cursorRing.style.transform = `translate3d(${STATE.cursorLerp.x}px, ${STATE.cursorLerp.y}px, 0) translate(-50%, -50%)`;
             }
 
             updateParallax();
@@ -384,16 +384,22 @@ document.addEventListener('DOMContentLoaded', () => {
         tick();
     }
 
-    // Pause heavy calculations when tab is hidden
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
-            cancelAnimationFrame(STATE.rafId);
+            if (STATE.rafId) cancelAnimationFrame(STATE.rafId);
             if (STATE.isPlaying && DOM.audio) DOM.audio.pause();
         } else {
-            if (DOM.introScene.style.display === 'none') {
+            // Only restart logic if we have progressed past intro scene
+            if (DOM.introScene && DOM.introScene.style.display === 'none') {
                 startRenderLoop();
             }
-            if (STATE.isPlaying && DOM.audio) DOM.audio.play();
+            if (STATE.isPlaying && DOM.audio) {
+                const playPromise = DOM.audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(err => console.warn("Auto-resume blocked:", err));
+                }
+            }
         }
     });
 });
+            
