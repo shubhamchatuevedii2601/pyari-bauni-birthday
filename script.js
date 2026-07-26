@@ -2,345 +2,283 @@ document.addEventListener('DOMContentLoaded', () => {
     'use strict';
 
     // ==========================================================================
-    // 1. DOM ELEMENTS & STATE MANAGEMENT
+    // 1. STATE & DOM CACHING
     // ==========================================================================
     const DOM = {
+        body: document.body,
         preloader: document.getElementById('preloader'),
-        appContainer: document.getElementById('app-container'),
-        openingScreen: document.getElementById('opening-screen'),
-        heroScreen: document.getElementById('hero-screen'),
-        openBtn: document.getElementById('open-surprise-btn'),
-        bgMusic: document.getElementById('bg-music'),
-        mouseGlow: document.getElementById('mouse-glow'),
-        typewriterText: document.getElementById('typewriter-text'),
-        galleryItems: document.querySelectorAll('.gallery-item img'),
-        modal: document.getElementById('image-modal'),
-        modalImage: document.getElementById('modal-image'),
-        closeModal: document.querySelector('.close-modal'),
-        modalLoader: document.querySelector('.modal-loader'),
-        canvas: document.getElementById('effects-canvas'),
-        cssParticles: document.getElementById('css-particles'),
-        screens: document.querySelectorAll('.screen')
+        smoothWrapper: document.getElementById('smooth-wrapper'),
+        introScene: document.getElementById('scene-intro'),
+        beginBtn: document.getElementById('begin-journey-btn'),
+        audio: document.getElementById('cinematic-score'),
+        soundToggle: document.getElementById('sound-toggle'),
+        progressBar: document.getElementById('scroll-progress'),
+        globalUi: document.querySelector('.global-ui'),
+        cursor: document.getElementById('custom-cursor'),
+        cursorRing: document.querySelector('.cursor-ring'),
+        cursorDot: document.querySelector('.cursor-dot'),
+        canvas: document.getElementById('webgl-canvas'),
+        typewriter: document.getElementById('main-letter-text'),
+        parallaxLayers: document.querySelectorAll('.parallax-layer'),
+        scenes: document.querySelectorAll('.cinematic-scene')
     };
 
     const STATE = {
         isMobile: window.innerWidth <= 768,
-        typewriterStarted: false,
-        fireworksActive: false,
-        audioInitialized: false,
-        sourceConnected: false,
-        isTouchDevice: false,
-        isTabActive: true,
-        musicData: 0,
-        particleInterval: null,
-        animFrameId: null
+        isTouch: ('ontouchstart' in window) || (navigator.maxTouchPoints > 0),
+        audioContext: null,
+        isPlaying: false,
+        scrollY: 0,
+        targetScrollY: 0,
+        scrollDelta: 0,
+        mouse: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+        cursorLerp: { x: window.innerWidth / 2, y: window.innerHeight / 2 },
+        isTyping: false,
+        rafId: null,
+        viewportHeight: window.innerHeight
     };
 
     // ==========================================================================
-    // 2. IMAGE PRELOADING & ERROR HANDLING
+    // 2. PRELOADER & INITIALIZATION
     // ==========================================================================
-    if (DOM.galleryItems.length > 0) {
-        DOM.galleryItems.forEach(img => {
-            if (img.complete && img.naturalWidth !== 0) {
-                img.classList.add('loaded');
-            } else {
-                img.addEventListener('load', () => img.classList.add('loaded'), { once: true });
-                img.addEventListener('error', () => {
-                    img.style.display = 'none'; 
-                    if (img.parentElement) {
-                        img.parentElement.style.background = 'linear-gradient(45deg, #140826, #220e42)';
-                        img.parentElement.insertAdjacentHTML('beforeend', 
-                            '<span style="color:var(--gold); position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; font-size:0.85rem; padding:10px;">Memory ❤️</span>'
-                        );
-                    }
-                }, { once: true });
+    const initApp = () => {
+        // Wait a minimum time for the cinematic loader effect
+        setTimeout(() => {
+            if (DOM.preloader) {
+                DOM.preloader.classList.remove('active');
+                setTimeout(() => {
+                    DOM.preloader.remove(); // Remove completely from DOM
+                    DOM.smoothWrapper.classList.remove('hidden');
+                    DOM.body.classList.remove('loading');
+                }, 1500);
             }
-        });
-    }
+        }, 3000);
+    };
+
+    // Trigger init on load
+    window.addEventListener('load', initApp);
+    // Fallback if load fails
+    setTimeout(initApp, 5000);
 
     // ==========================================================================
-    // 3. PRELOADER LOGIC (Strictly 3 Seconds)
+    // 3. AUDIO ENGINE (Web Audio API for iOS compliance)
     // ==========================================================================
-    setTimeout(() => {
-        if (DOM.preloader) {
-            DOM.preloader.classList.remove('active');
-            setTimeout(() => {
-                DOM.preloader.classList.add('hidden');
-                if (DOM.appContainer) {
-                    DOM.appContainer.classList.remove('hidden');
-                }
-            }, 1500);
-        }
-    }, 3000);
-
-    // ==========================================================================
-    // 4. AUDIO & INTERACTION LOGIC (iOS Safari Compatible)
-    // ==========================================================================
-    let audioCtx, analyser, dataArray;
-
-    function initWebAudioAPI() {
-        if (STATE.sourceConnected || !DOM.bgMusic) return;
+    const initAudio = async () => {
+        if (!DOM.audio) return;
         
         try {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            audioCtx = new AudioContext();
-            
-            // Critical for Mobile Safari
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
+            if (!STATE.audioContext) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                STATE.audioContext = new AudioContext();
             }
-
-            analyser = audioCtx.createAnalyser();
-            const source = audioCtx.createMediaElementSource(DOM.bgMusic);
             
-            source.connect(analyser);
-            analyser.connect(audioCtx.destination);
+            if (STATE.audioContext.state === 'suspended') {
+                await STATE.audioContext.resume();
+            }
             
-            analyser.fftSize = 128;
-            dataArray = new Uint8Array(analyser.frequencyBinCount);
-            
-            STATE.audioInitialized = true;
-            STATE.sourceConnected = true;
-            
-            analyzeAudio();
-        } catch (e) {
-            // Graceful fallback if Web Audio API is restricted
-            STATE.audioInitialized = false;
+            DOM.audio.volume = 0.5;
+            await DOM.audio.play();
+            STATE.isPlaying = true;
+            DOM.soundToggle.classList.add('playing');
+        } catch (error) {
+            console.warn("Audio playback prevented:", error);
         }
-    }
-
-    function analyzeAudio() {
-        if (!STATE.audioInitialized || !STATE.isTabActive) return;
-        
-        analyser.getByteFrequencyData(dataArray);
-        let sum = 0;
-        for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-        STATE.musicData = sum / dataArray.length;
-        
-        requestAnimationFrame(analyzeAudio);
-    }
-
-    if (DOM.openBtn) {
-        DOM.openBtn.addEventListener('click', () => {
-            // Prevent double taps
-            DOM.openBtn.disabled = true;
-            DOM.openBtn.style.pointerEvents = 'none';
-
-            if (DOM.bgMusic) {
-                DOM.bgMusic.volume = 0.6;
-                const playPromise = DOM.bgMusic.play();
-                if (playPromise !== undefined) {
-                    playPromise.then(() => {
-                        initWebAudioAPI();
-                    }).catch(() => {
-                        // Audio blocked fallback
-                    });
-                }
-            }
-
-            // Smooth transition
-            DOM.openingScreen.style.opacity = '0';
-            setTimeout(() => {
-                DOM.openingScreen.classList.add('hidden');
-                DOM.openingScreen.classList.remove('active');
-                if (DOM.heroScreen) {
-                    DOM.heroScreen.classList.add('active');
-                    DOM.heroScreen.scrollIntoView({ behavior: 'smooth' });
-                }
-                
-                initCanvasEffects();
-                startCSSParticles();
-            }, 1000);
-        });
-    }
-
-    // ==========================================================================
-    // 5. TOUCH & MOUSE GLOW LOGIC
-    // ==========================================================================
-    window.addEventListener('touchstart', () => {
-        STATE.isTouchDevice = true;
-        if (DOM.mouseGlow) DOM.mouseGlow.style.display = 'none';
-    }, { once: true, passive: true });
-
-    if (DOM.mouseGlow) {
-        document.addEventListener('mousemove', (e) => {
-            if (STATE.isTouchDevice || !STATE.isTabActive) return;
-            DOM.mouseGlow.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0) translate(-50%, -50%)`;
-        }, { passive: true });
-    }
-
-    // ==========================================================================
-    // 6. SCROLL OBSERVATION & ANIMATIONS
-    // ==========================================================================
-    const observerOptions = {
-        root: null,
-        rootMargin: '0px',
-        threshold: 0.2
     };
 
-    const screenObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('active');
+    const toggleAudio = () => {
+        if (!DOM.audio) return;
+        if (STATE.isPlaying) {
+            DOM.audio.pause();
+            STATE.isPlaying = false;
+            DOM.soundToggle.classList.remove('playing');
+        } else {
+            DOM.audio.play();
+            STATE.isPlaying = true;
+            DOM.soundToggle.classList.add('playing');
+        }
+    };
+
+    if (DOM.soundToggle) {
+        DOM.soundToggle.addEventListener('click', toggleAudio);
+    }
+
+    // ==========================================================================
+    // 4. ENTER JOURNEY (Button Logic)
+    // ==========================================================================
+    if (DOM.beginBtn) {
+        DOM.beginBtn.addEventListener('click', () => {
+            initAudio();
+            
+            // Fade out intro, unlock scroll
+            DOM.introScene.style.opacity = '0';
+            DOM.introScene.style.pointerEvents = 'none';
+            
+            setTimeout(() => {
+                DOM.introScene.classList.remove('lock-scroll');
+                DOM.introScene.style.display = 'none';
+                DOM.globalUi.classList.remove('hidden');
                 
-                if (entry.target.id === 'letter-screen' && !STATE.typewriterStarted) {
-                    STATE.typewriterStarted = true;
-                    typeLetter();
-                }
-            }
-
-            // Toggle fireworks strictly when final scene is in view to save resources
-            if (entry.target.id === 'final-screen') {
-                STATE.fireworksActive = entry.isIntersecting;
-            }
-        });
-    }, observerOptions);
-
-    if (DOM.screens) {
-        DOM.screens.forEach(screen => {
-            if (screen.id !== 'opening-screen') screenObserver.observe(screen);
+                // Start Render Loop once in the experience
+                startRenderLoop();
+            }, 1200);
         });
     }
 
     // ==========================================================================
-    // 7. TYPEWRITER EFFECT
+    // 5. CUSTOM MAGNETIC CURSOR
     // ==========================================================================
-    const letterContent = "My Dearest Pyari Bauni,\n\nOn this magical night, under the gentle glow of the moon, I want to take a moment to celebrate you. You bring so much light, warmth, and beauty into my world. Every memory we share is a treasure, and your smile is my favorite sight.\n\nMay this year bring you all the love and happiness you deserve.\n\nHappy Birthday, my love! ❤️";
-    let charIndex = 0;
+    if (!STATE.isTouch && DOM.cursor) {
+        window.addEventListener('mousemove', (e) => {
+            STATE.mouse.x = e.clientX;
+            STATE.mouse.y = e.clientY;
+            
+            // Instant snap for dot
+            if (DOM.cursorDot) {
+                DOM.cursorDot.style.transform = `translate(${e.clientX}px, ${e.clientY}px) translate(-50%, -50%)`;
+            }
+        });
 
-    function typeLetter() {
-        if (!DOM.typewriterText) return;
-        if (charIndex < letterContent.length) {
-            DOM.typewriterText.innerHTML += letterContent.charAt(charIndex) === '\n' ? '<br>' : letterContent.charAt(charIndex);
-            charIndex++;
-            setTimeout(typeLetter, 40);
-        } else {
-            const cursor = document.getElementById('typewriter-cursor');
-            if (cursor) cursor.style.display = 'none';
+        // Hover states for interactive elements
+        const interactiveElements = document.querySelectorAll('button, a, .sound-toggle, .glass-panel, .polaroid-frame');
+        interactiveElements.forEach(el => {
+            el.addEventListener('mouseenter', () => DOM.cursor.classList.add('hovering'));
+            el.addEventListener('mouseleave', () => DOM.cursor.classList.remove('hovering'));
+        });
+
+        // Magnetic Button Effect
+        if (DOM.beginBtn) {
+            DOM.beginBtn.addEventListener('mousemove', (e) => {
+                const rect = DOM.beginBtn.getBoundingClientRect();
+                const x = e.clientX - rect.left - rect.width / 2;
+                const y = e.clientY - rect.top - rect.height / 2;
+                
+                DOM.beginBtn.style.transform = `translate(${x * 0.2}px, ${y * 0.2}px)`;
+            });
+            
+            DOM.beginBtn.addEventListener('mouseleave', () => {
+                DOM.beginBtn.style.transform = `translate(0px, 0px)`;
+            });
         }
     }
 
     // ==========================================================================
-    // 8. GALLERY MODAL
+    // 6. INTERSECTION OBSERVERS (Scene triggers, 3D letter, Typing)
     // ==========================================================================
-    if (DOM.modal && DOM.galleryItems.length > 0) {
-        const hideModal = () => {
-            DOM.modal.classList.add('hidden');
-            document.body.style.overflow = '';
-            
-            setTimeout(() => { 
-                if (DOM.modalImage) {
-                    DOM.modalImage.src = ''; 
-                    DOM.modalImage.classList.remove('loaded');
-                }
-            }, 500);
-        };
-
-        DOM.galleryItems.forEach(item => {
-            item.addEventListener('click', () => {
-                if (!item.classList.contains('loaded')) return;
-                
-                document.body.style.overflow = 'hidden';
-                DOM.modal.classList.remove('hidden');
-                if (DOM.modalLoader) DOM.modalLoader.classList.remove('hidden');
-                
-                DOM.modalImage.src = item.src;
-                
-                DOM.modalImage.onload = () => {
-                    if (DOM.modalLoader) DOM.modalLoader.classList.add('hidden');
-                    DOM.modalImage.classList.add('loaded');
-                };
-
-                DOM.modalImage.onerror = () => {
-                    if (DOM.modalLoader) DOM.modalLoader.classList.add('hidden');
-                    hideModal();
-                };
-            });
-        });
-
-        if (DOM.closeModal) DOM.closeModal.addEventListener('click', hideModal);
-        
-        DOM.modal.addEventListener('click', (e) => {
-            if (e.target === DOM.modal || e.target.classList.contains('modal-content-wrapper')) {
-                hideModal();
+    const sceneObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('scene-active');
+                entry.target.setAttribute('data-visible', 'true');
+            } else {
+                entry.target.setAttribute('data-visible', 'false');
             }
         });
+    }, { threshold: 0.15 });
 
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && !DOM.modal.classList.contains('hidden')) hideModal();
+    DOM.scenes.forEach(scene => sceneObserver.observe(scene));
+
+    // Specific observer for the 3D Glass Letter
+    const letterEl = document.querySelector('.glass-letter');
+    if (letterEl) {
+        const letterObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    letterEl.classList.add('in-view');
+                    if (!STATE.isTyping) {
+                        STATE.isTyping = true;
+                        startTypewriter();
+                    }
+                }
+            });
+        }, { threshold: 0.4 });
+        letterObserver.observe(letterEl);
+    }
+
+    // ==========================================================================
+    // 7. CINEMATIC TYPEWRITER EFFECT
+    // ==========================================================================
+    const letterText = "My Dearest Pyari Bauni,\n\nBefore you scroll any further, I want you to know something.\n\nYou are the most beautiful chapter of my life. This little universe... I built it just for you.\n\nTake your time, listen to the music, and let me show you how I see you.\n\nHappy Birthday, my love. ❤️";
+    
+    function startTypewriter() {
+        if (!DOM.typewriter) return;
+        let charIndex = 0;
+        
+        function type() {
+            if (charIndex < letterText.length) {
+                const char = letterText.charAt(charIndex);
+                DOM.typewriter.innerHTML += char === '\n' ? '<br>' : char;
+                charIndex++;
+                
+                // Randomize typing speed for human feel (30ms to 80ms)
+                const speed = Math.random() * 50 + 30;
+                setTimeout(type, speed);
+            } else {
+                const cursor = document.querySelector('.typing-cursor');
+                if (cursor) cursor.style.animation = 'blink 2s step-end infinite';
+            }
+        }
+        setTimeout(type, 1000); // 1 second delay after rotating in
+    }
+
+    // ==========================================================================
+    // 8. SCROLL & PARALLAX ENGINE (Vanilla requestAnimationFrame)
+    // ==========================================================================
+    window.addEventListener('scroll', () => {
+        STATE.targetScrollY = window.scrollY;
+    }, { passive: true });
+
+    function updateParallax() {
+        // Linear Interpolation (Lerp) for smooth scroll feel
+        STATE.scrollDelta = STATE.targetScrollY - STATE.scrollY;
+        STATE.scrollY += STATE.scrollDelta * 0.1; // 0.1 is the easing factor
+        
+        // Update Scroll Progress Bar
+        if (DOM.progressBar) {
+            const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+            const progress = (STATE.scrollY / maxScroll) * 100;
+            DOM.progressBar.style.height = `${Math.min(100, Math.max(0, progress))}%`;
+        }
+
+        // Apply Parallax to active scenes only for performance
+        DOM.parallaxLayers.forEach(layer => {
+            // Find parent scene
+            const parentScene = layer.closest('.cinematic-scene');
+            if (parentScene && parentScene.getAttribute('data-visible') === 'true') {
+                const speed = parseFloat(layer.getAttribute('data-speed')) || 1;
+                
+                // Calculate distance from center of viewport
+                const rect = layer.getBoundingClientRect();
+                const centerOffset = (rect.top + rect.height / 2) - (STATE.viewportHeight / 2);
+                
+                // Core parallax formula
+                const yOffset = centerOffset * (1 - speed);
+                
+                layer.style.transform = `translate3d(0, ${yOffset}px, 0)`;
+            }
         });
     }
 
     // ==========================================================================
-    // 9. HARDWARE-ACCELERATED CSS PARTICLES
-    // ==========================================================================
-    function startCSSParticles() {
-        if (!DOM.cssParticles || STATE.particleInterval) return;
-        
-        const spawnRate = STATE.isMobile ? 1200 : 600; 
-        
-        STATE.particleInterval = setInterval(() => {
-            if (!STATE.isTabActive) return;
-
-            const particle = document.createElement('div');
-            particle.className = 'css-particle';
-            particle.innerHTML = Math.random() > 0.5 ? '❤️' : '✨';
-            
-            const size = Math.random() * 15 + 10;
-            const startPosX = Math.random() * window.innerWidth;
-            const duration = Math.random() * 5000 + 5000;
-            
-            particle.style.cssText = `
-                left: ${startPosX}px;
-                top: -30px;
-                font-size: ${size}px;
-                transition: transform ${duration}ms linear, opacity ${duration}ms ease-in-out;
-                filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.5));
-            `;
-            
-            DOM.cssParticles.appendChild(particle);
-            
-            requestAnimationFrame(() => {
-                particle.style.opacity = '0.6';
-                particle.style.transform = `translate3d(${(Math.random() - 0.5) * 150}px, ${window.innerHeight + 50}px, 0) rotate(${Math.random() * 360}deg)`;
-            });
-
-            setTimeout(() => {
-                if (particle.parentNode) particle.parentNode.removeChild(particle);
-            }, duration);
-
-        }, spawnRate);
-    }
-
-    // ==========================================================================
-    // 10. CANVAS HIGH-PERFORMANCE PHYSICS & VISIBILITY HANDLING
+    // 9. HIGH-PERFORMANCE CANVAS ENGINE (Stars, Floating Dust)
     // ==========================================================================
     let ctx, w, h;
-    let stars = [], fireflies = [], fireworks = [];
+    let particles = [];
 
-    function initCanvasEffects() {
+    function initCanvas() {
         if (!DOM.canvas) return;
         ctx = DOM.canvas.getContext('2d', { alpha: false });
-        
         resizeCanvas();
         
-        window.addEventListener('resize', handleResize, { passive: true });
-        window.addEventListener('orientationchange', () => {
-            setTimeout(handleResize, 200);
+        window.addEventListener('resize', () => {
+            STATE.viewportHeight = window.innerHeight;
+            resizeCanvas();
         }, { passive: true });
 
-        const numStars = STATE.isMobile ? 70 : 180;
-        const numFireflies = STATE.isMobile ? 12 : 35;
-
-        for (let i = 0; i < numStars; i++) stars.push(new Star());
-        for (let i = 0; i < numFireflies; i++) fireflies.push(new Firefly());
-
-        animateCanvas();
-    }
-
-    function handleResize() {
-        resizeCanvas();
-        STATE.isMobile = window.innerWidth <= 768;
+        // Generate particles based on device capability
+        const count = STATE.isMobile ? 80 : 200;
+        for (let i = 0; i < count; i++) {
+            particles.push(new Particle());
+        }
     }
 
     function resizeCanvas() {
@@ -348,154 +286,114 @@ document.addEventListener('DOMContentLoaded', () => {
         h = DOM.canvas.height = window.innerHeight;
     }
 
-    class Star {
+    class Particle {
         constructor() {
             this.x = Math.random() * (w || window.innerWidth);
             this.y = Math.random() * (h || window.innerHeight);
-            this.r = Math.random() * 1.5;
+            this.z = Math.random() * 2 + 0.1; // Depth (Parallax factor)
+            this.size = (Math.random() * 1.5 + 0.5) / this.z;
             this.alpha = Math.random();
-            this.speed = (Math.random() * 0.015) + 0.005;
+            this.targetAlpha = Math.random();
+            this.vx = (Math.random() - 0.5) * 0.2;
+            this.vy = (Math.random() - 0.5) * 0.2;
         }
-        update() {
-            this.alpha += this.speed;
-            if (this.alpha >= 1 || this.alpha <= 0) this.speed *= -1;
-        }
-        draw() {
-            ctx.beginPath();
-            ctx.arc(this.x % w, this.y % h, this.r, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(255, 255, 255, ${Math.abs(this.alpha)})`;
-            ctx.fill();
-        }
-    }
 
-    class Firefly {
-        constructor() {
-            this.x = Math.random() * (w || window.innerWidth);
-            this.y = Math.random() * (h || window.innerHeight);
-            this.r = Math.random() * 2 + 1;
-            this.vx = (Math.random() - 0.5) * 0.5;
-            this.vy = (Math.random() - 0.5) * 0.5;
-            this.alpha = Math.random();
-        }
         update() {
-            const boost = (STATE.musicData > 100) ? 1.4 : 1;
-            
-            this.x += this.vx * boost;
-            this.y += this.vy * boost;
-            
+            // Natural drift
+            this.x += this.vx;
+            this.y += this.vy;
+
+            // React to Scroll (Parallax depth effect)
+            // Faster particles are "closer"
+            this.y -= (STATE.scrollDelta * 0.05) / this.z;
+
+            // React to Mouse subtly
+            if (!STATE.isTouch) {
+                const dx = STATE.mouse.x - this.x;
+                const dy = STATE.mouse.y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 150) {
+                    this.x -= (dx / dist) * 0.5;
+                    this.y -= (dy / dist) * 0.5;
+                }
+            }
+
+            // Twinkle effect
+            this.alpha += (this.targetAlpha - this.alpha) * 0.02;
+            if (Math.abs(this.alpha - this.targetAlpha) < 0.1) {
+                this.targetAlpha = Math.random();
+            }
+
+            // Screen Wrap
             if (this.x < 0) this.x = w;
             if (this.x > w) this.x = 0;
             if (this.y < 0) this.y = h;
             if (this.y > h) this.y = 0;
-            
-            this.vx += (Math.random() - 0.5) * 0.05;
-            this.vy += (Math.random() - 0.5) * 0.05;
-            
-            if (this.vx > 0.8) this.vx = 0.8;
-            if (this.vx < -0.8) this.vx = -0.8;
-            if (this.vy > 0.8) this.vy = 0.8;
-            if (this.vy < -0.8) this.vy = -0.8;
         }
-        draw() {
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
-            const glow = (STATE.musicData > 120) ? 12 : 6;
-            ctx.fillStyle = `rgba(212, 175, 55, ${this.alpha})`;
-            ctx.shadowBlur = glow;
-            ctx.shadowColor = '#d4af37';
-            ctx.fill();
-            ctx.shadowBlur = 0;
-        }
-    }
 
-    class FireworkParticle {
-        constructor(x, y, color) {
-            this.x = x;
-            this.y = y;
-            this.color = color;
-            this.r = Math.random() * 2 + 1;
-            const angle = Math.random() * Math.PI * 2;
-            const velocity = Math.random() * 5 + 2;
-            this.vx = Math.cos(angle) * velocity;
-            this.vy = Math.sin(angle) * velocity;
-            this.alpha = 1;
-            this.decay = Math.random() * 0.02 + 0.015;
-            this.gravity = 0.05;
-        }
-        update() {
-            this.vy += this.gravity;
-            this.x += this.vx;
-            this.y += this.vy;
-            this.alpha -= this.decay;
-        }
         draw() {
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(${this.color}, ${Math.max(0, this.alpha)})`;
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(253, 245, 201, ${this.alpha * 0.8})`;
             ctx.fill();
         }
     }
 
-    function createFirework() {
-        const x = Math.random() * (w * 0.6) + (w * 0.2);
-        const y = Math.random() * (h * 0.4) + (h * 0.1);
-        const colors = ['212, 175, 55', '253, 245, 201', '255, 255, 255', '180, 130, 255'];
-        const color = colors[Math.floor(Math.random() * colors.length)];
+    function renderCanvas() {
+        if (!ctx) return;
         
-        const particleCount = STATE.isMobile ? 25 : 50;
-        for (let i = 0; i < particleCount; i++) {
-            fireworks.push(new FireworkParticle(x, y, color));
-        }
-    }
-
-    function animateCanvas() {
-        if (!STATE.isTabActive) {
-            STATE.animFrameId = requestAnimationFrame(animateCanvas);
-            return;
-        }
-
-        ctx.fillStyle = '#030108'; 
+        // Deep cinematic background redraw
+        ctx.fillStyle = '#020104'; 
         ctx.fillRect(0, 0, w, h);
         
-        const grad = ctx.createRadialGradient(w/2, h, 0, w/2, h, h);
-        grad.addColorStop(0, '#140826');
-        grad.addColorStop(1, '#030108');
+        const grad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w, h));
+        grad.addColorStop(0, '#080a14');
+        grad.addColorStop(1, '#020104');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, w, h);
 
-        ctx.globalCompositeOperation = 'lighter';
-
-        stars.forEach(s => { s.update(); s.draw(); });
-        fireflies.forEach(f => { f.update(); f.draw(); });
-
-        if (STATE.fireworksActive) {
-            const chance = (STATE.musicData > 130) ? 0.07 : 0.02;
-            if (Math.random() < chance) createFirework();
-            
-            for (let i = fireworks.length - 1; i >= 0; i--) {
-                const p = fireworks[i];
-                p.update();
-                p.draw();
-                if (p.alpha <= 0) fireworks.splice(i, 1);
-            }
+        ctx.globalCompositeOperation = 'screen';
+        
+        for (let i = 0; i < particles.length; i++) {
+            particles[i].update();
+            particles[i].draw();
         }
         
         ctx.globalCompositeOperation = 'source-over';
-        STATE.animFrameId = requestAnimationFrame(animateCanvas);
     }
 
     // ==========================================================================
-    // 11. PAGE VISIBILITY MANAGEMENT
+    // 10. MASTER RENDER LOOP (RAF)
     // ==========================================================================
+    function startRenderLoop() {
+        initCanvas();
+        
+        function tick() {
+            // Update Cursor Lerp
+            if (!STATE.isTouch && DOM.cursorRing) {
+                STATE.cursorLerp.x += (STATE.mouse.x - STATE.cursorLerp.x) * 0.15;
+                STATE.cursorLerp.y += (STATE.mouse.y - STATE.cursorLerp.y) * 0.15;
+                DOM.cursorRing.style.transform = `translate(${STATE.cursorLerp.x}px, ${STATE.cursorLerp.y}px) translate(-50%, -50%)`;
+            }
+
+            updateParallax();
+            renderCanvas();
+            
+            STATE.rafId = requestAnimationFrame(tick);
+        }
+        tick();
+    }
+
+    // Pause heavy calculations when tab is hidden
     document.addEventListener('visibilitychange', () => {
-        STATE.isTabActive = !document.hidden;
-        if (STATE.isTabActive) {
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume();
+        if (document.hidden) {
+            cancelAnimationFrame(STATE.rafId);
+            if (STATE.isPlaying && DOM.audio) DOM.audio.pause();
+        } else {
+            if (DOM.introScene.style.display === 'none') {
+                startRenderLoop();
             }
-            if (STATE.audioInitialized) {
-                analyzeAudio();
-            }
+            if (STATE.isPlaying && DOM.audio) DOM.audio.play();
         }
     });
 });
