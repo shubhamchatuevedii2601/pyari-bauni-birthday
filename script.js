@@ -204,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================================================
     // 7. CINEMATIC TYPEWRITER EFFECT
     // ==========================================================================
-    const letterText = "My Dearest Pyari Bauni,\n\nBefore you scroll any further, I want you to know something.\n\nYou are the most beautiful chapter of my life. This little universe... I built it just for you.\n\nTake your time, listen to the music, and let me show you how I see you.\n\nHappy Birthday, my love. ❤️";
+    const letterText = " Bauni,\n\nBefore you scroll any further, I want you to know something.\n\nYou are the most beautiful chapter of my life. This little universe... I built it just for you.\n\nTake your time, listen to the music, and let me show you how I see you.\n\nHappy Birthday, Shreya. ❤️";
     
     function startTypewriter() {
         if (!DOM.typewriter) return;
