@@ -1,40 +1,53 @@
-const text =
-"Dear Pyari Bauni 💜,\n\nWishing you a day filled with smiles, happiness, peace and beautiful memories. May every dream you have find its way to reality.\n\n✨ Happy Birthday! ✨";
+// ==========================
+// Moonlit Wishes
+// script.js
+// ==========================
 
-let i = 0;
+// Loader
+const loader = document.getElementById("loader");
+const startBtn = document.getElementById("startBtn");
 
-const typing = document.getElementById("typing");
+// Background Music
+const music = new Audio("music/birthday.mp3");
+music.loop = true;
 
-typing.innerHTML = "";
+// Loader click
+loader.addEventListener("click", () => {
+    loader.style.opacity = "0";
 
-function typeWriter() {
-    if (i < text.length) {
-        typing.innerHTML += text.charAt(i);
-        i++;
-        setTimeout(typeWriter, 35);
-    }
-}
+    setTimeout(() => {
+        loader.style.display = "none";
+    }, 700);
 
-window.onload = () => {
-    setTimeout(typeWriter, 1500);
-};
-
-document.getElementById("startBtn").addEventListener("click", () => {
-    document.getElementById("message").scrollIntoView({
-        behavior: "smooth"
-    });
+    music.play().catch(() => {});
 });
 
-document.getElementById("cakeBtn").addEventListener("click", () => {
-    alert("🎉 Happy Birthday Pyari Bauni! Make a beautiful wish! 💜");
-});button{
-  margin-top:30px;
-  padding:14px 35px;
-  border:none;
-  border-radius:50px;
-  background:#ff4dd2;
-  color:#fff;
-  font-size:18px;
+// Button click
+if (startBtn) {
+    startBtn.addEventListener("click", () => {
+        document.querySelector(".letter").scrollIntoView({
+            behavior: "smooth"
+        });
+    });
+}
+
+// ==========================
+// Typewriter Effect
+// ==========================
+
+const text = document.getElementById("typewriter");
+
+if (text) {
+
+    const content = text.innerHTML;
+
+    text.innerHTML = "";
+
+    let i = 0;
+
+    function typing() {
+
+        if (i <  font-size:18px;
   cursor:pointer;
   transition:.3s;
 }
