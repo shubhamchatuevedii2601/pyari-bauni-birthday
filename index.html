@@ -13,7 +13,6 @@
     <link rel="preload" as="audio" href="music/birthday.mp3">
     
     <!-- Premium Typography Selection -->
-    <!-- Playfair Display for Luxury Headings, Montserrat for Clean UI, WindSong for intimate handwriting -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;300;400;500&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=WindSong:wght@400;500&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="style.css">
@@ -30,10 +29,10 @@
         <div class="cursor-text">View</div>
     </div>
 
-    <!-- Canvas Layer for High-Performance Physics (Moon, Stars, Floating Dust, Particles) -->
+    <!-- Canvas Layer for High-Performance Physics -->
     <canvas id="webgl-canvas" aria-hidden="true"></canvas>
     
-    <!-- Global UI Overlay (Scroll Progress, Audio Toggle) -->
+    <!-- Global UI Overlay -->
     <nav class="global-ui hidden" aria-hidden="true">
         <div class="progress-container">
             <div class="progress-bar" id="scroll-progress"></div>
@@ -59,7 +58,7 @@
         </div>
     </div>
 
-    <!-- 2. SCROLL WRAPPER (For Smooth Scrolling & Parallax Context) -->
+    <!-- 2. SCROLL WRAPPER -->
     <main id="smooth-wrapper" class="hidden">
         
         <!-- SCENE 0: THE INVITATION -->
@@ -92,9 +91,9 @@
             </div>
         </section>
 
-        <!-- SCENE 2: THE LETTER (Floating Depth & Typewriter) -->
+        <!-- SCENE 2: THE LETTER (Fixed Invalid Class Name) -->
         <section id="scene-letter" class="cinematic-scene vh-100">
-            <div class="3d-perspective-container">
+            <div class="perspective-container-3d">
                 <div class="glass-letter floating-element">
                     <div class="letter-lighting-sweep"></div>
                     <p class="typewriter-canvas" id="main-letter-text" aria-live="polite"></p>
@@ -103,7 +102,7 @@
             </div>
         </section>
 
-        <!-- SCENE 3: CHAPTER 1 - ASYMMETRICAL FLOATING LAYOUT (Teasing) -->
+        <!-- SCENE 3: CHAPTER 1 - ASYMMETRICAL -->
         <section id="chapter-1" class="cinematic-scene chapter-scene layout-asymmetric">
             <div class="chapter-content">
                 <div class="media-wrapper parallax-layer" data-speed="0.9">
@@ -118,7 +117,7 @@
             </div>
         </section>
 
-        <!-- SCENE 4: CHAPTER 2 - CINEMASCOPE WIDE CROP (Flirting) -->
+        <!-- SCENE 4: CHAPTER 2 - CINEMASCOPE -->
         <section id="chapter-2" class="cinematic-scene chapter-scene layout-cinemascope">
             <div class="full-width-mask">
                 <img src="photos/2.jpg" alt="Chapter 2" class="parallax-image slow-pan">
@@ -130,7 +129,7 @@
             </div>
         </section>
 
-        <!-- SCENE 5: CHAPTER 3 - SPLIT SCREEN INTERSECTION (Cute) -->
+        <!-- SCENE 5: CHAPTER 3 - SPLIT SCREEN -->
         <section id="chapter-3" class="cinematic-scene chapter-scene layout-split">
             <div class="split-left">
                 <div class="text-content parallax-layer" data-speed="0.8">
@@ -145,7 +144,7 @@
             </div>
         </section>
 
-        <!-- SCENE 6: CHAPTER 4 - POLAROID SCATTER (Caught) -->
+        <!-- SCENE 6: CHAPTER 4 - POLAROID SCATTER -->
         <section id="chapter-4" class="cinematic-scene chapter-scene layout-scatter">
             <div class="scatter-container">
                 <div class="polaroid-frame floating-element" data-rotate="-5deg">
@@ -159,7 +158,7 @@
             </div>
         </section>
 
-        <!-- SCENE 7: CHAPTER 5 - SPOTLIGHT FOCUS (Romantic) -->
+        <!-- SCENE 7: CHAPTER 5 - SPOTLIGHT -->
         <section id="chapter-5" class="cinematic-scene chapter-scene layout-spotlight">
             <div class="spotlight-bg"></div>
             <div class="spotlight-content">
@@ -173,7 +172,7 @@
             </div>
         </section>
 
-        <!-- SCENE 8: CHAPTER 6 - FULLSCREEN FADE INTO EMOTION (Emotional) -->
+        <!-- SCENE 8: CHAPTER 6 - FULLSCREEN FADE -->
         <section id="chapter-6" class="cinematic-scene chapter-scene layout-fullscreen-fade">
             <div class="fade-bg-wrapper">
                 <img src="photos/6.jpg" alt="Chapter 6" class="bg-image blurred-bg">
@@ -201,5 +200,7 @@
         
     </main>
 
+    <script src="script.js"></script>
 </body>
-</html>
+                                                                                                                     </html>
+                                                                                                                     
